@@ -8,6 +8,9 @@
 #include <array>
 #include "mtfind.h"
 
+typedef std::array <int, 3> t_result;
+typedef std::vector <t_result> t_results;
+
 static const size_t BLOCK_SIZE = 65536;
 
 // Ulysses.txt ~ 23,6 blocks
@@ -19,47 +22,41 @@ public:
     char* end;
 };
 
-void d_count(Block block, std::vector <std::array <int, 3>> & results) {
-    int lines = 1;
-    int d_cha = 0;
-    int bytes = 1;
+void d_count(Block block, t_results & results) {
+    t_result result = { 1, 0, 1 };
     while (block.begin && block.begin < block.end) {
-        if (*block.begin == 'd') {
-            ++d_cha;
-        }
         if (*block.begin == '\n') {
-            ++lines;
+            ++result[0];
+        }
+        if (*block.begin == 'd') {
+            ++result[1];
         }
         ++block.begin;
-        ++bytes;
+        ++result[2];
     }
-    results[block.n][0] = bytes;
-    results[block.n][1] = d_cha;
-    results[block.n][2] = lines;
+    results[block.n] = result;
 }
 
-void print_results(std::vector <std::array <int, 3>> & results)
-{
-    int total_bytes = 0;
-    int total_d_cha = 0;
-    int total_lines = 0;
+void print_results(t_results & results) {
+    t_result total = { 0, 0, 0 };
     int i = 0;
     for (auto & result : results) {
         if (result[0] == 0) {
             break;
         }
-        std::cout << "Block: " << std::format("{:6}", i);
-        std::cout << ", Bytes: " << result[0];
+        std::cout << "  Block: " << std::format("{:4}", i);
+        std::cout << ", Lines: " << result[0];
         std::cout << ", 'd'ch: " << result[1];
-        std::cout << ", Lines: " << result[2] << std::endl;
-        total_bytes += result[0];
-        total_d_cha += result[1];
-        total_lines += result[2];
+        std::cout << ", Bytes: " << result[2] << std::endl;
+        total[0] += result[0];
+        total[1] += result[1];
+        total[2] += result[2];
         ++i;
     }
-    std::cout << "Total Bytes: " << total_bytes << std::endl;
-    std::cout << "Total 'd'ch: " << total_d_cha << std::endl;
-    std::cout << "Total Lines: " << total_lines << std::endl;
+    std::cout << "Total: Blocks: " << std::format("{:4}", i);
+    std::cout << ", Lines: " << total[0];
+    std::cout << ", 'd'ch: " << total[1];
+    std::cout << ", Bytes: " << total[2] << std::endl;
 }
 
 int main() {
@@ -77,7 +74,7 @@ int main() {
 
     size_t file_size = file.size();
     size_t max_blocks = 1 + file_size / BLOCK_SIZE;
-    std::vector <std::array <int, 3>> results(max_blocks, { 0, 0, 0 });
+    t_results results(max_blocks, { 0, 0, 0 });
     size_t length = BLOCK_SIZE;
 
     if (file.is_open()) {
