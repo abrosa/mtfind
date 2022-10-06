@@ -17,6 +17,11 @@ static const size_t BLOCK_SIZE = 65536;
 
 class Block {
 public:
+    Block(int n, char* begin, char* end) {
+        this->n = n;
+        this->begin = begin;
+        this->end = end;
+    }
     int n;
     char* begin;
     char* end;
@@ -93,10 +98,7 @@ int main() {
             if (!eob) {
                 break;
             }
-            Block block = { 0 };
-            block.n = i;
-            block.begin = bob;
-            block.end = eob;
+            Block block(i, bob, eob);
             blocks.push_back(block);
             position += eob - bob + 1;
             if (position >= file_size) {
