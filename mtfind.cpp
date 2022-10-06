@@ -6,7 +6,7 @@
 #include <vector>
 
 static const size_t THREADS = 32;
-static const size_t BLOCK = 65536;
+static const size_t BLOCK = 64;
 
 // Ulysses.txt ~ 23,6 blocks
 
@@ -38,8 +38,9 @@ int main() {
 
     boost::iostreams::mapped_file file;
 
-    std::string file_name = "Ulysses.txt";
+    // std::string file_name = "Ulysses.txt";
     // std::string file_name = "example.txt";
+    std::string file_name = "dabadee.txt";
 
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
 
