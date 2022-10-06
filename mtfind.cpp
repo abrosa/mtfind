@@ -8,7 +8,7 @@
 #include <array>
 #include "mtfind.h"
 
-static const size_t BLOCK_SIZE = 64;
+static const size_t BLOCK_SIZE = 65536;
 
 // Ulysses.txt ~ 23,6 blocks
 
@@ -19,23 +19,23 @@ public:
     char* end;
 };
 
-void d_count(const int n, char* bob, char* eob, std::vector <std::array <int, 3>> & results) {
+void d_count(Block block, std::vector <std::array <int, 3>> & results) {
     int lines = 1;
     int d_cha = 0;
     int bytes = 1;
-    while (bob && bob < eob) {
-        if (*bob == 'd') {
+    while (block.begin && block.begin < block.end) {
+        if (*block.begin == 'd') {
             ++d_cha;
         }
-        if (*bob == '\n') {
+        if (*block.begin == '\n') {
             ++lines;
         }
-        ++bob;
+        ++block.begin;
         ++bytes;
     }
-    results[n][0] = bytes;
-    results[n][1] = d_cha;
-    results[n][2] = lines;
+    results[block.n][0] = bytes;
+    results[block.n][1] = d_cha;
+    results[block.n][2] = lines;
 }
 
 void print_results(std::vector <std::array <int, 3>> & results)
@@ -69,9 +69,9 @@ int main() {
 
     boost::iostreams::mapped_file file;
 
-    // std::string file_name = "Ulysses.txt";
+    std::string file_name = "Ulysses.txt";
     // std::string file_name = "example.txt";
-    std::string file_name = "dabadee.txt";
+    // std::string file_name = "dabadee.txt";
 
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
 
@@ -117,7 +117,7 @@ int main() {
             ++i;
         }
         for (auto& block : blocks) {
-            threads.push_back(std::thread(d_count, block.n, block.begin, block.end, std::ref(results)));
+            threads.push_back(std::thread(d_count, block, std::ref(results)));
         }
 
         for (auto& thread : threads) {
