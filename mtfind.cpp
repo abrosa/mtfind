@@ -4,31 +4,55 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <format>
+#include <array>
+#include "mtfind.h"
 
-static const size_t BLOCK_SIZE = 65536;
+static const size_t BLOCK_SIZE = 64;
 
 // Ulysses.txt ~ 23,6 blocks
 
-void d_count(const int n, char* bob, char* eob,
-    std::vector<int> & results,
-    std::vector<int> & lines,
-    std::vector<int> & bytes) {
-    int line = 1;
-    int counter = 0;
-    int by = 1;
+void d_count(const int n, char* bob, char* eob, std::vector <std::array <int, 3>> & results) {
+    int lines = 1;
+    int d_cha = 0;
+    int bytes = 1;
     while (bob && bob < eob) {
         if (*bob == 'd') {
-            ++counter;
+            ++d_cha;
         }
         if (*bob == '\n') {
-            ++line;
+            ++lines;
         }
         ++bob;
-        ++by;
+        ++bytes;
     }
-    bytes[n] = by;
-    lines[n] = line;
-    results[n] = counter;
+    results[n][0] = bytes;
+    results[n][1] = d_cha;
+    results[n][2] = lines;
+}
+
+void print_results(std::vector <std::array <int, 3>> & results)
+{
+    int total_bytes = 0;
+    int total_d_cha = 0;
+    int total_lines = 0;
+    int i = 0;
+    for (auto & result : results) {
+        if (result[0] == 0) {
+            break;
+        }
+        std::cout << "Block: " << std::format("{:6}", i);
+        std::cout << ", Bytes: " << result[0];
+        std::cout << ", 'd'ch: " << result[1];
+        std::cout << ", Lines: " << result[2] << std::endl;
+        total_bytes += result[0];
+        total_d_cha += result[1];
+        total_lines += result[2];
+        ++i;
+    }
+    std::cout << "Total Bytes: " << total_bytes << std::endl;
+    std::cout << "Total 'd'ch: " << total_d_cha << std::endl;
+    std::cout << "Total Lines: " << total_lines << std::endl;
 }
 
 int main() {
@@ -37,17 +61,15 @@ int main() {
 
     boost::iostreams::mapped_file file;
 
-    std::string file_name = "Ulysses.txt";
+    // std::string file_name = "Ulysses.txt";
     // std::string file_name = "example.txt";
-    // std::string file_name = "dabadee.txt";
+    std::string file_name = "dabadee.txt";
 
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
 
     size_t file_size = file.size();
     size_t max_blocks = 1 + file_size / BLOCK_SIZE;
-    std::vector<int> results(max_blocks, 0);
-    std::vector<int> lines(max_blocks, 0);
-    std::vector<int> bytes(max_blocks, 0);
+    std::vector <std::array <int, 3>> results(max_blocks, { 0, 0, 0 });
     size_t length = BLOCK_SIZE;
 
     if (file.is_open()) {
@@ -66,7 +88,7 @@ int main() {
             if (!eob) {
                 break;
             }
-            threads.push_back(std::thread(d_count, i, bob, eob, std::ref(results), std::ref(lines), std::ref(bytes)));
+            threads.push_back(std::thread(d_count, i, bob, eob, std::ref(results)));
             position += eob - bob + 1;
             if (position >= file_size) {
                 break;
@@ -87,24 +109,7 @@ int main() {
             th.join();
         }
 
-        int total_bytes = 0;
-        int total_d = 0;
-        int total_lines = 0;
-        for (int i = 0; i < max_blocks; ++i) {
-            if (bytes[i] == 0) {
-                break;
-            }
-            std::cout << "Thread: " << i;
-            std::cout << ", Bytes: " << bytes[i];
-            std::cout << ", Result: " << results[i];
-            std::cout << ", Lines: " << lines[i] << std::endl;
-            total_bytes += bytes[i];
-            total_d += results[i];
-            total_lines += lines[i];
-        }
-        std::cout << "Total bytes: " << total_bytes << std::endl;
-        std::cout << "Total 'd': " << total_d << std::endl;
-        std::cout << "Total lines: " << total_lines << std::endl;
+        print_results(results);
 
         file.close();
     }
