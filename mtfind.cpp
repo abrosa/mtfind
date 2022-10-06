@@ -8,7 +8,7 @@
 #include <array>
 #include "mtfind.h"
 
-typedef std::array <int, 3> t_result;
+typedef std::array <uintmax_t, 3> t_result;
 typedef std::vector <t_result> t_results;
 
 static const size_t BLOCK_SIZE = 65536;
@@ -17,12 +17,12 @@ static const size_t BLOCK_SIZE = 65536;
 
 class Block {
 public:
-    Block(int n, char* begin, char* end) {
+    Block(uintmax_t n, char* begin, char* end) {
         this->n = n;
         this->begin = begin;
         this->end = end;
     }
-    int n;
+    uintmax_t n;
     char* begin;
     char* end;
 };
@@ -71,6 +71,7 @@ int main() {
 
     boost::iostreams::mapped_file file;
 
+    // std::string file_name = "test.bin";
     std::string file_name = "Ulysses.txt";
     // std::string file_name = "example.txt";
     // std::string file_name = "dabadee.txt";
@@ -78,14 +79,10 @@ int main() {
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
 
     size_t leftover = file.size();
-    size_t max_blocks = 1 + leftover / BLOCK_SIZE;
-    t_results results(max_blocks, { 0, 0, 0 });
 
     if (file.is_open()) {
-        char* data = (char*) file.const_data();
-        Block full(0, data, data + leftover - 1);
         int i = 0;
-        char* bob = full.begin;
+        char* bob = (char*)file.const_data();
         char* eob = bob + std::min(BLOCK_SIZE, leftover) - 1;
         while (bob && eob) {
             while (eob && *eob != '\n') {
@@ -110,6 +107,9 @@ int main() {
             }
             ++i;
         }
+
+        size_t max_blocks = 1 + file.size() / BLOCK_SIZE;
+        t_results results(max_blocks, { 0, 0, 0 });
 
         for (auto& block : blocks) {
             threads.push_back(std::thread(d_count, block, std::ref(results)));
