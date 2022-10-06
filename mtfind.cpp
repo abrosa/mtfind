@@ -77,20 +77,16 @@ int main() {
 
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
 
-    size_t file_size = file.size();
-    size_t max_blocks = 1 + file_size / BLOCK_SIZE;
+    size_t leftover = file.size();
+    size_t max_blocks = 1 + leftover / BLOCK_SIZE;
     t_results results(max_blocks, { 0, 0, 0 });
-    size_t length = BLOCK_SIZE;
 
     if (file.is_open()) {
         char* data = (char*) file.const_data();
-        char* bod = data;
-        char* eod = data + file_size - 1;
+        Block full(0, data, data + leftover - 1);
         int i = 0;
-        size_t position = 0;
-        length = std::min(BLOCK_SIZE, file_size - position);
-        char* bob = bod;
-        char* eob = bob + length - 1;
+        char* bob = full.begin;
+        char* eob = bob + std::min(BLOCK_SIZE, leftover) - 1;
         while (bob && eob) {
             while (eob && *eob != '\n') {
                 ++eob;
@@ -100,21 +96,21 @@ int main() {
             }
             Block block(i, bob, eob);
             blocks.push_back(block);
-            position += eob - bob + 1;
-            if (position >= file_size) {
+            leftover -= eob - bob + 1;
+            if (0 >= leftover) {
                 break;
             }
             bob = eob + 1;
             if (!bob) {
                 break;
             }
-            length = std::min(BLOCK_SIZE, file_size - position);
-            eob = bob + length - 1;
+            eob = bob + std::min(BLOCK_SIZE, leftover) - 1;
             if (!eob) {
                 break;
             }
             ++i;
         }
+
         for (auto& block : blocks) {
             threads.push_back(std::thread(d_count, block, std::ref(results)));
         }
