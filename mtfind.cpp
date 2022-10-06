@@ -12,6 +12,13 @@ static const size_t BLOCK_SIZE = 64;
 
 // Ulysses.txt ~ 23,6 blocks
 
+class Block {
+public:
+    int n;
+    char* begin;
+    char* end;
+};
+
 void d_count(const int n, char* bob, char* eob, std::vector <std::array <int, 3>> & results) {
     int lines = 1;
     int d_cha = 0;
@@ -58,6 +65,7 @@ void print_results(std::vector <std::array <int, 3>> & results)
 int main() {
     std::vector<std::thread> threads;
 
+    std::vector<Block> blocks;
 
     boost::iostreams::mapped_file file;
 
@@ -88,7 +96,11 @@ int main() {
             if (!eob) {
                 break;
             }
-            threads.push_back(std::thread(d_count, i, bob, eob, std::ref(results)));
+            Block block = { 0 };
+            block.n = i;
+            block.begin = bob;
+            block.end = eob;
+            blocks.push_back(block);
             position += eob - bob + 1;
             if (position >= file_size) {
                 break;
@@ -104,9 +116,12 @@ int main() {
             }
             ++i;
         }
+        for (auto& block : blocks) {
+            threads.push_back(std::thread(d_count, block.n, block.begin, block.end, std::ref(results)));
+        }
 
-        for (auto& th : threads) {
-            th.join();
+        for (auto& thread : threads) {
+            thread.join();
         }
 
         print_results(results);
