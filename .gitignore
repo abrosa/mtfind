@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+## Some VS crap
+*.ipch
+*.db
