@@ -13,6 +13,18 @@ static const size_t BLOCK = 65536;
 void d_count(const int n, char* data, size_t length, int results[]) {
     int counter = 0;
     int position = 0;
+
+    // skip first line if it's not the first part
+    if (n != 0) {
+        while (data && *data != '\n') {
+            ++data;
+            ++position;
+        }
+        ++data;
+        ++position;
+    }
+
+    // process main part
     while (data && position < length) {
         if (*data == 'd') {
             ++counter;
@@ -20,6 +32,20 @@ void d_count(const int n, char* data, size_t length, int results[]) {
         ++data;
         ++position;
     }
+
+    // process next line if it's not the last part
+    if (n != THREADS - 1) {
+        while (data && *data != '\n') {
+            if (*data == 'd') {
+                ++counter;
+            }
+            ++data;
+            ++position;
+        }
+        ++data;
+        ++position;
+    }
+
     results[n] = counter;
 }
 
