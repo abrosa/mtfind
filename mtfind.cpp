@@ -5,37 +5,26 @@
 #include <thread>
 #include <vector>
 
-static const size_t THREADS = 24;
+static const size_t THREADS = 32;
 static const size_t BLOCK = 65536;
 
 // Ulysses.txt ~ 23,6 blocks
 
-void d_count(const int n, char* data, char* eod, int results[], int lines[]) {
+void d_count(const int n, char* bob, char* eob, int results[], int lines[], int bytes[]) {
     int line = 1;
     int counter = 0;
-    int position = 0;
-    // char ch = (*data == '\n') ? '?' : *data;
-    // std::cout << ch << "^" << n << "|" << line << "|" << counter << "|" << position << std::endl;
-    while (data && data < eod) {
-        if (*data == 'd') {
+    int by = 1;
+    while (bob && bob < eob) {
+        if (*bob == 'd') {
             ++counter;
         }
-        if (*data == '\n') {
+        if (*bob == '\n') {
             ++line;
-            ++data;
-            ++position;
-            // ch = (*data == '\n') ? '?' : *data;
-            // std::cout << ch << "-" << n << "|" << line << "|" << counter << "|" << position << std::endl;
         }
-        if (!data || data == eod) {
-            break;
-        }
-        ++data;
-        ++position;
-        // ch = (*data == '\n') ? '?' : *data;
-        // std::cout << ch << "_" << n << "|" << line << "|" << counter << "|" << position << std::endl;
+        ++bob;
+        ++by;
     }
-
+    bytes[n] = by;
     lines[n] = line;
     results[n] = counter;
 }
@@ -45,6 +34,7 @@ int main() {
 
     int results[THREADS] = { 0 };
     int lines[THREADS] = { 0 };
+    int bytes[THREADS] = { 0 };
 
     boost::iostreams::mapped_file file;
 
@@ -67,17 +57,14 @@ int main() {
         char* bob = bod;
         char* eob = bob + length - 1;
         while (bob && eob) {
-            // shift eob to next eol
             while (eob && *eob != '\n') {
                 ++eob;
             }
             if (!eob) {
                 break;
             }
-            // threads.push_back(std::thread(d_count, i, bob, eob, results, lines));
-            d_count(i, bob, eob, results, lines);
+            threads.push_back(std::thread(d_count, i, bob, eob, results, lines, bytes));
             position += eob - bob + 1;
-            // std::cout << "processed up to position = " << position << std::endl;
             if (position >= file_size) {
                 break;
             }
@@ -97,15 +84,19 @@ int main() {
             th.join();
         }
 
+        int total_bytes = 0;
         int total_d = 0;
         int total_lines = 0;
         for (int i = 0; i < THREADS; ++i) {
             std::cout << "Thread: " << i;
+            std::cout << ", Bytes: " << bytes[i];
             std::cout << ", Result: " << results[i];
             std::cout << ", Lines: " << lines[i] << std::endl;
+            total_bytes += bytes[i];
             total_d += results[i];
             total_lines += lines[i];
         }
+        std::cout << "Total bytes: " << total_bytes << std::endl;
         std::cout << "Total 'd': " << total_d << std::endl;
         std::cout << "Total lines: " << total_lines << std::endl;
 
