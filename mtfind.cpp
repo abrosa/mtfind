@@ -11,25 +11,26 @@
 typedef std::array <uintmax_t, 3> t_result;
 typedef std::vector <t_result> t_results;
 
-static const size_t BLOCK_SIZE = 65536;
+static const size_t BLOCK_SIZE = 64;
 
 // Ulysses.txt ~ 23,6 blocks
 
 class Block {
 public:
-    Block(int n, char* begin, char* end) {
+    Block(int n, char* begin, size_t size) {
         this->n = n;
         this->begin = begin;
-        this->end = end;
+        this->size = size;
     }
     int n;
     char* begin;
-    char* end;
+    size_t size;
 };
 
 void d_count(Block block, t_results & results) {
-    t_result result = { 1, 0, 1 };
-    while (block.begin && block.begin < block.end) {
+    size_t size = block.size;
+    t_result result = { 0, 0, 0 };
+    while (block.begin && size > 0) {
         if (*block.begin == '\n') {
             ++result[0];
         }
@@ -37,18 +38,16 @@ void d_count(Block block, t_results & results) {
             ++result[1];
         }
         ++block.begin;
+        --size;
         ++result[2];
     }
     results[block.n] = result;
 }
 
 void print_results(t_results & results) {
-    t_result total = { 0, 0, 0 };
+    t_result total = { 1, 0, 0 };
     int i = 0;
     for (auto & result : results) {
-        if (result[0] == 0) {
-            break;
-        }
         std::cout << "  Block: " << std::format("{:4}", i);
         std::cout << ", Lines: " << result[0];
         std::cout << ", 'd'ch: " << result[1];
@@ -72,43 +71,56 @@ int main() {
     boost::iostreams::mapped_file file;
 
     // std::string file_name = "test.bin";
-    std::string file_name = "Ulysses.txt";
+    // std::string file_name = "Ulysses.txt";
     // std::string file_name = "example.txt";
-    // std::string file_name = "dabadee.txt";
+    std::string file_name = "dabadee.txt";
 
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
-
     size_t leftover = file.size();
-
+    size_t max_blocks = 1 + file.size() / BLOCK_SIZE;
+    t_results results(max_blocks, { 0, 0, 0 });
+    int counter = 0;
     if (file.is_open()) {
-        Block block(0, (char*)file.const_data(), nullptr);
-        while (block.begin && leftover > 0) {
-            block.end = block.begin + std::min(BLOCK_SIZE, leftover) - 1;
-            while (block.end && *block.end != '\n') {
-                ++block.end;
-            }
-            if (!block.end) {
+        Block block(-1, (char*)file.const_data(), file.size());
+        while (block.begin && block.size > 0) {
+            ++block.n;
+            if (block.n >= max_blocks) {
+                std::cout << "block.n >= max_blocks" << std::endl;
                 break;
             }
+            block.size = std::min(BLOCK_SIZE, leftover);
+            leftover -= block.size;
+            if (block.size <= 0) {
+                std::cout << "block.size <= 0" << std::endl;
+                break;
+            }
+            while (block.begin + block.size - 1 &&
+                *(block.begin + block.size - 1) != '\n' && leftover > 0) {
+                ++block.size;
+                --leftover;
+            }
+
+            std::cout << " block.n = " << block.n;
+            std::cout << " block.size = " << block.size;
+            counter += block.size;
+            std::cout << " total = " << counter;
+            std::cout << " leftover = " << leftover;
+            std::cout << std::endl;
+
             blocks.push_back(block);
-            ++block.n;
-            leftover -= block.end - block.begin + 1;
-            block.begin = block.end + 1;
+            block.begin += block.size;
+            if (!block.begin) {
+                std::cout << "!block.begin" << std::endl;
+                break;
+            }
         }
-
-        size_t max_blocks = 1 + file.size() / BLOCK_SIZE;
-        t_results results(max_blocks, { 0, 0, 0 });
-
         for (auto& block : blocks) {
             threads.push_back(std::thread(d_count, block, std::ref(results)));
         }
-
         for (auto& thread : threads) {
             thread.join();
         }
-
         print_results(results);
-
         file.close();
     }
     else {
