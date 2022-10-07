@@ -17,12 +17,12 @@ static const size_t BLOCK_SIZE = 65536;
 
 class Block {
 public:
-    Block(uintmax_t n, char* begin, char* end) {
+    Block(int n, char* begin, char* end) {
         this->n = n;
         this->begin = begin;
         this->end = end;
     }
-    uintmax_t n;
+    int n;
     char* begin;
     char* end;
 };
@@ -81,31 +81,19 @@ int main() {
     size_t leftover = file.size();
 
     if (file.is_open()) {
-        int i = 0;
-        char* bob = (char*)file.const_data();
-        char* eob = bob + std::min(BLOCK_SIZE, leftover) - 1;
-        while (bob && eob) {
-            while (eob && *eob != '\n') {
-                ++eob;
+        Block block(0, (char*)file.const_data(), nullptr);
+        while (block.begin && leftover > 0) {
+            block.end = block.begin + std::min(BLOCK_SIZE, leftover) - 1;
+            while (block.end && *block.end != '\n') {
+                ++block.end;
             }
-            if (!eob) {
+            if (!block.end) {
                 break;
             }
-            Block block(i, bob, eob);
             blocks.push_back(block);
-            leftover -= eob - bob + 1;
-            if (0 >= leftover) {
-                break;
-            }
-            bob = eob + 1;
-            if (!bob) {
-                break;
-            }
-            eob = bob + std::min(BLOCK_SIZE, leftover) - 1;
-            if (!eob) {
-                break;
-            }
-            ++i;
+            ++block.n;
+            leftover -= block.end - block.begin + 1;
+            block.begin = block.end + 1;
         }
 
         size_t max_blocks = 1 + file.size() / BLOCK_SIZE;
