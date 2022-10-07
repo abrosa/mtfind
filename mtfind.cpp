@@ -8,9 +8,6 @@
 #include <array>
 #include "mtfind.h"
 
-typedef std::array <uintmax_t, 3> t_result;
-typedef std::vector <t_result> t_results;
-
 static const size_t BLOCK_SIZE = 16;
 
 // Ulysses.txt ~ 23,6 blocks * 65536
@@ -39,23 +36,33 @@ public:
     std::string found;
 };
 
-void d_count(Block block, std::vector <std::vector <Result>> & results) {
-    size_t size = block.size;
-    std::vector <Result> res;
-    int line = 1;
+class BlockResults {
+public:
+    int total_lines;
+    int total_bytes;
+    int total_found;
+    std::vector <Result> results;
+};
+
+void d_count(Block block, std::vector <BlockResults> & results) {
+    BlockResults res;
+    res.total_bytes = block.size;
+    res.total_lines = 1;
+    res.total_found = 0;
     int position = 1;
-    while (block.begin && size > 0) {
+    while (block.begin && block.size > 0) {
         if (*block.begin == '\n') {
-            ++line;
+            ++res.total_lines;
             position = 0;
         }
         if (*block.begin == 'd') {
+            ++res.total_found;
             std::string found = "d";
-            Result current(line, position, found);
-            res.push_back(current);
+            Result current(res.total_lines, position, found);
+            res.results.push_back(current);
         }
         ++block.begin;
-        --size;
+        --block.size;
         ++position;
     }
     int i = 0;
@@ -67,12 +74,36 @@ void d_count(Block block, std::vector <std::vector <Result>> & results) {
     }
 }
 
-void print_results(std::vector <std::vector <Result>> & results) {
+void merge_results(std::vector <BlockResults> & results) {
     int i = 0;
-    for (auto & result : results) {
-        for (auto& res : result) {
-            std::cout << res.line;
+    for (auto& result : results) {
+        std::cout << " total " << result.total_bytes;
+        std::cout << " " << result.total_lines;
+        std::cout << " " << result.total_found << std::endl;
+        for (auto& res : result.results) {
+            std::cout << " " << res.line;
             std::cout << " " << res.position;
+            std::cout << " " << res.found << std::endl;
+        }
+        ++i;
+    }
+}
+
+void print_results(std::vector <BlockResults> & results) {
+    int i = 0;
+    int total_lines = 0;
+    int total_bytes = 0;
+    int total_found = 0;
+    for (auto& result : results) {
+        total_lines += result.total_lines;
+        total_bytes += result.total_bytes;
+        total_found += result.total_found;
+        std::cout << " total_bytes " << total_bytes;
+        std::cout << " total_lines " << total_lines;
+        std::cout << " total_found " << total_found << std::endl;
+        for (auto& res : result.results) {
+            std::cout << " " << total_lines + res.line;
+            std::cout << " " << total_bytes + res.position;
             std::cout << " " << res.found << std::endl;
         }
         ++i;
@@ -133,9 +164,9 @@ int main() {
         split_to_blocks(block, blocks);
         std::vector<std::thread> threads;
         Result empty(0, 0, "");
-        std::vector <Result> emptys;
-        emptys.push_back(empty);
-        std::vector <std::vector <Result>> results(blocks.size(), emptys);
+        BlockResults emptys;
+        emptys.results.push_back(empty);
+        std::vector <BlockResults> results(blocks.size(), emptys);
         for (auto& block : blocks) {
             threads.push_back(std::thread(d_count, block, std::ref(results)));
         }
