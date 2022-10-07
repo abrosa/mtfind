@@ -104,7 +104,6 @@ void merge_results(std::vector <BlockResults>& results) {
 
 void print_results(std::vector <BlockResults>& results) {
     int total_lines = -1;
-    size_t total_bytes = 0;
     int total_found = 0;
     for (auto& result : results) {
         for (auto& res : result.results) {
@@ -115,7 +114,6 @@ void print_results(std::vector <BlockResults>& results) {
             }
         }
         total_lines += result.total_lines - 1;
-        total_bytes += result.total_bytes;
     }
 }
 
@@ -149,9 +147,18 @@ void split_to_blocks(Block& block, std::vector<Block>& blocks)
 }
 
 int main(int argc, char* argv[]) {
+    std::string file_name;
+    std::string search_mask;
+    if (argc < 3) {
+        file_name = "task.txt";
+        search_mask = "?ad";
+    }
+    else {
+        file_name = argv[1];
+        search_mask = argv[2];
+    }
+
     boost::iostreams::mapped_file file;
-    std::string search_mask = "nothing";
-    std::string file_name = "Ulysses.txt";
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
     if (file.is_open()) {
         Block block(-1, (char*)file.const_data(), file.size(), search_mask);
