@@ -6,22 +6,24 @@
 #include <vector>
 #include <format>
 #include <array>
-#include "mtfind.h"
 
-static const size_t BLOCK_SIZE = 16;
+// static const size_t MAX_THREADS = 8;
+static const size_t BLOCK_SIZE = 65536;
 
 // Ulysses.txt ~ 23,6 blocks * 65536
 
 class Block {
 public:
-    Block(int n, char* begin, size_t size) {
+    Block(int n, char* begin, size_t size, std::string mask) {
         this->n = n;
         this->begin = begin;
         this->size = size;
+        this->mask = mask;
     }
     int n;
     char* begin;
     size_t size;
+    std::string mask;
 };
 
 class Result {
@@ -44,6 +46,20 @@ public:
     std::vector <Result> results;
 };
 
+bool compare_mask(char* line, std::string mask) {
+    int len = mask.size();
+    int pos = 0;
+    while (line && *line != '\n' && pos < len) {
+        if (mask[pos] != '?' && mask[pos] != *line) {
+            return false;
+        }
+        ++pos;
+        ++line;
+    }
+    if (pos == len) return true;
+    return false;
+}
+
 void d_count(Block block, std::vector <BlockResults> & results) {
     BlockResults res;
     res.total_bytes = block.size;
@@ -55,9 +71,9 @@ void d_count(Block block, std::vector <BlockResults> & results) {
             ++res.total_lines;
             position = 0;
         }
-        if (*block.begin == 'd') {
+        if (compare_mask(block.begin, block.mask)) {
             ++res.total_found;
-            std::string found = "d";
+            std::string found(block.begin, block.mask.size());
             Result current(res.total_lines, position, found);
             res.results.push_back(current);
         }
@@ -74,36 +90,21 @@ void d_count(Block block, std::vector <BlockResults> & results) {
     }
 }
 
-void merge_results(std::vector <BlockResults> & results) {
-    int i = 0;
-    for (auto& result : results) {
-        std::cout << " total " << result.total_bytes;
-        std::cout << " " << result.total_lines;
-        std::cout << " " << result.total_found << std::endl;
-        for (auto& res : result.results) {
-            std::cout << " " << res.line;
-            std::cout << " " << res.position;
-            std::cout << " " << res.found << std::endl;
-        }
-        ++i;
-    }
-}
-
 void print_results(std::vector <BlockResults> & results) {
     int i = 0;
-    int total_lines = 0;
+    int total_lines = - 1;
     int total_bytes = 0;
     int total_found = 0;
     for (auto& result : results) {
-        total_lines += result.total_lines;
+        total_lines += result.total_lines - 1;
         total_bytes += result.total_bytes;
         total_found += result.total_found;
         std::cout << " total_bytes " << total_bytes;
         std::cout << " total_lines " << total_lines;
         std::cout << " total_found " << total_found << std::endl;
         for (auto& res : result.results) {
-            std::cout << " " << total_lines + res.line;
-            std::cout << " " << total_bytes + res.position;
+            std::cout << " " << result.total_lines + res.line;
+            std::cout << " " << res.position;
             std::cout << " " << res.found << std::endl;
         }
         ++i;
@@ -152,14 +153,15 @@ void split_to_blocks(Block& block, std::vector<Block>& blocks)
 
 int main() {
     boost::iostreams::mapped_file file;
-    std::string file_name = "task.txt";
+    std::string search_mask = "nothing";
+    // std::string file_name = "task.txt";
     // std::string file_name = "test.bin";
-    // std::string file_name = "Ulysses.txt";
+    std::string file_name = "Ulysses.txt";
     // std::string file_name = "example.txt";
     // std::string file_name = "dabadee.txt";
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
     if (file.is_open()) {
-        Block block(-1, (char*)file.const_data(), file.size());
+        Block block(-1, (char*)file.const_data(), file.size(), search_mask);
         std::vector<Block> blocks;
         split_to_blocks(block, blocks);
         std::vector<std::thread> threads;

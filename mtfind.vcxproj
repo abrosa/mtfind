@@ -135,9 +135,6 @@
   <ItemGroup>
     <ClCompile Include="mtfind.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="mtfind.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
