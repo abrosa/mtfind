@@ -11,7 +11,7 @@
 typedef std::array <uintmax_t, 3> t_result;
 typedef std::vector <t_result> t_results;
 
-static const size_t BLOCK_SIZE = 64;
+static const size_t BLOCK_SIZE = 65536;
 
 // Ulysses.txt ~ 23,6 blocks
 
@@ -48,10 +48,10 @@ void print_results(t_results & results) {
     t_result total = { 1, 0, 0 };
     int i = 0;
     for (auto & result : results) {
-        std::cout << "  Block: " << std::format("{:4}", i);
-        std::cout << ", Lines: " << result[0];
-        std::cout << ", 'd'ch: " << result[1];
-        std::cout << ", Bytes: " << result[2] << std::endl;
+        // std::cout << "  Block: " << std::format("{:4}", i);
+        // std::cout << ", Lines: " << result[0];
+        // std::cout << ", 'd'ch: " << result[1];
+        // std::cout << ", Bytes: " << result[2] << std::endl;
         total[0] += result[0];
         total[1] += result[1];
         total[2] += result[2];
@@ -63,57 +63,59 @@ void print_results(t_results & results) {
     std::cout << ", Bytes: " << total[2] << std::endl;
 }
 
+void split_to_blocks(Block& block, std::vector<Block>& blocks)
+{
+    // int counter = 0;
+    size_t leftover = block.size;
+    size_t max_blocks = 1 + leftover / BLOCK_SIZE;
+    while (block.begin && block.size > 0) {
+        ++block.n;
+        if (block.n > max_blocks) {
+            std::cout << "block.n > max_blocks" << std::endl;
+            break;
+        }
+        block.size = std::min(BLOCK_SIZE, leftover);
+        leftover -= block.size;
+        if (block.size <= 0) {
+            // this one is a good break
+            // std::cout << "block.size <= 0" << std::endl;
+            break;
+        }
+        while (block.begin + block.size - 1 &&
+            *(block.begin + block.size - 1) != '\n' && leftover > 0) {
+            ++block.size;
+            --leftover;
+        }
+
+        // std::cout << " block.n = " << block.n;
+        // std::cout << " block.size = " << block.size;
+        // counter += block.size;
+        // std::cout << " total = " << counter;
+        // std::cout << " leftover = " << leftover;
+        // std::cout << std::endl;
+
+        blocks.push_back(block);
+        block.begin += block.size;
+        if (!block.begin) {
+            std::cout << "!block.begin" << std::endl;
+            break;
+        }
+    }
+}
+
 int main() {
-    std::vector<std::thread> threads;
-
-    std::vector<Block> blocks;
-
     boost::iostreams::mapped_file file;
-
     // std::string file_name = "test.bin";
-    // std::string file_name = "Ulysses.txt";
+    std::string file_name = "Ulysses.txt";
     // std::string file_name = "example.txt";
-    std::string file_name = "dabadee.txt";
-
+    // std::string file_name = "dabadee.txt";
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
-    size_t leftover = file.size();
-    size_t max_blocks = 1 + file.size() / BLOCK_SIZE;
-    t_results results(max_blocks, { 0, 0, 0 });
-    int counter = 0;
     if (file.is_open()) {
         Block block(-1, (char*)file.const_data(), file.size());
-        while (block.begin && block.size > 0) {
-            ++block.n;
-            if (block.n >= max_blocks) {
-                std::cout << "block.n >= max_blocks" << std::endl;
-                break;
-            }
-            block.size = std::min(BLOCK_SIZE, leftover);
-            leftover -= block.size;
-            if (block.size <= 0) {
-                std::cout << "block.size <= 0" << std::endl;
-                break;
-            }
-            while (block.begin + block.size - 1 &&
-                *(block.begin + block.size - 1) != '\n' && leftover > 0) {
-                ++block.size;
-                --leftover;
-            }
-
-            std::cout << " block.n = " << block.n;
-            std::cout << " block.size = " << block.size;
-            counter += block.size;
-            std::cout << " total = " << counter;
-            std::cout << " leftover = " << leftover;
-            std::cout << std::endl;
-
-            blocks.push_back(block);
-            block.begin += block.size;
-            if (!block.begin) {
-                std::cout << "!block.begin" << std::endl;
-                break;
-            }
-        }
+        std::vector<Block> blocks;
+        split_to_blocks(block, blocks);
+        std::vector<std::thread> threads;
+        t_results results(blocks.size(), {0, 0, 0});
         for (auto& block : blocks) {
             threads.push_back(std::thread(d_count, block, std::ref(results)));
         }

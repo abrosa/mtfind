@@ -1,3 +1,2 @@
 ﻿  mtfind.cpp
-C:\Users\abrosa\source\repos\mtfind\mtfind.cpp(105,29): warning C4267: +=: преобразование из "size_t" в "int"; возможна потеря данных
   mtfind.vcxproj -> C:\Users\abrosa\source\repos\mtfind\x64\Debug\mtfind.exe
