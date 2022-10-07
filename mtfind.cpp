@@ -13,7 +13,7 @@ typedef std::vector <t_result> t_results;
 
 static const size_t BLOCK_SIZE = 16;
 
-// Ulysses.txt ~ 23,6 blocks
+// Ulysses.txt ~ 23,6 blocks * 65536
 
 class Block {
 public:
@@ -29,6 +29,11 @@ public:
 
 class Result {
 public:
+    Result(int line, int position, std::string found) {
+        this->line = line;
+        this->position = position;
+        this->found = found;
+    }
     int line;
     int position;
     std::string found;
@@ -46,10 +51,7 @@ void d_count(Block block, std::vector <std::vector <Result>> & results) {
         }
         if (*block.begin == 'd') {
             std::string found = "d";
-            Result current;
-            current.line = line;
-            current.position = position;
-            current.found = found;
+            Result current(line, position, found);
             res.push_back(current);
         }
         ++block.begin;
@@ -130,10 +132,7 @@ int main() {
         std::vector<Block> blocks;
         split_to_blocks(block, blocks);
         std::vector<std::thread> threads;
-        Result empty;
-        empty.line = 0;
-        empty.position = 0;
-        empty.found = "";
+        Result empty(0, 0, "");
         std::vector <Result> emptys;
         emptys.push_back(empty);
         std::vector <std::vector <Result>> results(blocks.size(), emptys);
