@@ -11,7 +11,7 @@
 typedef std::array <uintmax_t, 3> t_result;
 typedef std::vector <t_result> t_results;
 
-static const size_t BLOCK_SIZE = 65536;
+static const size_t BLOCK_SIZE = 16;
 
 // Ulysses.txt ~ 23,6 blocks
 
@@ -27,40 +27,54 @@ public:
     size_t size;
 };
 
-void d_count(Block block, t_results & results) {
+class Result {
+public:
+    int line;
+    int position;
+    std::string found;
+};
+
+void d_count(Block block, std::vector <std::vector <Result>> & results) {
     size_t size = block.size;
-    t_result result = { 0, 0, 0 };
+    std::vector <Result> res;
+    int line = 1;
+    int position = 1;
     while (block.begin && size > 0) {
         if (*block.begin == '\n') {
-            ++result[0];
+            ++line;
+            position = 0;
         }
         if (*block.begin == 'd') {
-            ++result[1];
+            std::string found = "d";
+            Result current;
+            current.line = line;
+            current.position = position;
+            current.found = found;
+            res.push_back(current);
         }
         ++block.begin;
         --size;
-        ++result[2];
+        ++position;
     }
-    results[block.n] = result;
-}
-
-void print_results(t_results & results) {
-    t_result total = { 1, 0, 0 };
     int i = 0;
     for (auto & result : results) {
-        // std::cout << "  Block: " << std::format("{:4}", i);
-        // std::cout << ", Lines: " << result[0];
-        // std::cout << ", 'd'ch: " << result[1];
-        // std::cout << ", Bytes: " << result[2] << std::endl;
-        total[0] += result[0];
-        total[1] += result[1];
-        total[2] += result[2];
+        if (i == block.n) {
+            result = res;
+        }
         ++i;
     }
-    std::cout << "Total: Blocks: " << std::format("{:4}", i);
-    std::cout << ", Lines: " << total[0];
-    std::cout << ", 'd'ch: " << total[1];
-    std::cout << ", Bytes: " << total[2] << std::endl;
+}
+
+void print_results(std::vector <std::vector <Result>> & results) {
+    int i = 0;
+    for (auto & result : results) {
+        for (auto& res : result) {
+            std::cout << res.line;
+            std::cout << " " << res.position;
+            std::cout << " " << res.found << std::endl;
+        }
+        ++i;
+    }
 }
 
 void split_to_blocks(Block& block, std::vector<Block>& blocks)
@@ -105,8 +119,9 @@ void split_to_blocks(Block& block, std::vector<Block>& blocks)
 
 int main() {
     boost::iostreams::mapped_file file;
+    std::string file_name = "task.txt";
     // std::string file_name = "test.bin";
-    std::string file_name = "Ulysses.txt";
+    // std::string file_name = "Ulysses.txt";
     // std::string file_name = "example.txt";
     // std::string file_name = "dabadee.txt";
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
@@ -115,7 +130,13 @@ int main() {
         std::vector<Block> blocks;
         split_to_blocks(block, blocks);
         std::vector<std::thread> threads;
-        t_results results(blocks.size(), {0, 0, 0});
+        Result empty;
+        empty.line = 0;
+        empty.position = 0;
+        empty.found = "";
+        std::vector <Result> emptys;
+        emptys.push_back(empty);
+        std::vector <std::vector <Result>> results(blocks.size(), emptys);
         for (auto& block : blocks) {
             threads.push_back(std::thread(d_count, block, std::ref(results)));
         }
