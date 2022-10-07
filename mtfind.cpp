@@ -40,14 +40,20 @@ public:
 
 class BlockResults {
 public:
-    int total_lines;
-    int total_bytes;
-    int total_found;
+    BlockResults(int total_lines, size_t total_bytes, int total_found, std::vector<Result> results) {
+        this->total_lines = total_lines;
+        this->total_bytes = total_bytes;
+        this->total_found = total_found;
+        this->results = results;
+    }
+    int total_lines = 0;
+    size_t total_bytes = 0;
+    int total_found = 0;
     std::vector <Result> results;
 };
 
 bool compare_mask(char* line, std::string mask) {
-    int len = mask.size();
+    size_t len = mask.size();
     int pos = 0;
     while (line && *line != '\n' && pos < len) {
         if (mask[pos] != '?' && mask[pos] != *line) {
@@ -61,10 +67,8 @@ bool compare_mask(char* line, std::string mask) {
 }
 
 void d_count(Block block, std::vector <BlockResults> & results) {
-    BlockResults res;
-    res.total_bytes = block.size;
-    res.total_lines = 1;
-    res.total_found = 0;
+    Result empty(0, 0, "");
+    BlockResults res(1, block.size, 0, {empty});
     int position = 1;
     while (block.begin && block.size > 0) {
         if (*block.begin == '\n') {
@@ -90,30 +94,33 @@ void d_count(Block block, std::vector <BlockResults> & results) {
     }
 }
 
-void print_results(std::vector <BlockResults> & results) {
-    int i = 0;
-    int total_lines = - 1;
-    int total_bytes = 0;
+void merge_results(std::vector <BlockResults>& results) {
     int total_found = 0;
     for (auto& result : results) {
+        total_found += result.total_found;
+    }
+    std::cout << total_found << std::endl;
+}
+
+void print_results(std::vector <BlockResults>& results) {
+    int total_lines = -1;
+    size_t total_bytes = 0;
+    int total_found = 0;
+    for (auto& result : results) {
+        for (auto& res : result.results) {
+            if (res.position != 0) {
+                std::cout << total_lines + res.line + 1;
+                std::cout << " " << res.position;
+                std::cout << " " << res.found << std::endl;
+            }
+        }
         total_lines += result.total_lines - 1;
         total_bytes += result.total_bytes;
-        total_found += result.total_found;
-        std::cout << " total_bytes " << total_bytes;
-        std::cout << " total_lines " << total_lines;
-        std::cout << " total_found " << total_found << std::endl;
-        for (auto& res : result.results) {
-            std::cout << " " << result.total_lines + res.line;
-            std::cout << " " << res.position;
-            std::cout << " " << res.found << std::endl;
-        }
-        ++i;
     }
 }
 
 void split_to_blocks(Block& block, std::vector<Block>& blocks)
 {
-    // int counter = 0;
     size_t leftover = block.size;
     size_t max_blocks = 1 + leftover / BLOCK_SIZE;
     while (block.begin && block.size > 0) {
@@ -125,8 +132,6 @@ void split_to_blocks(Block& block, std::vector<Block>& blocks)
         block.size = std::min(BLOCK_SIZE, leftover);
         leftover -= block.size;
         if (block.size <= 0) {
-            // this one is a good break
-            // std::cout << "block.size <= 0" << std::endl;
             break;
         }
         while (block.begin + block.size - 1 &&
@@ -134,14 +139,6 @@ void split_to_blocks(Block& block, std::vector<Block>& blocks)
             ++block.size;
             --leftover;
         }
-
-        // std::cout << " block.n = " << block.n;
-        // std::cout << " block.size = " << block.size;
-        // counter += block.size;
-        // std::cout << " total = " << counter;
-        // std::cout << " leftover = " << leftover;
-        // std::cout << std::endl;
-
         blocks.push_back(block);
         block.begin += block.size;
         if (!block.begin) {
@@ -151,14 +148,10 @@ void split_to_blocks(Block& block, std::vector<Block>& blocks)
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     boost::iostreams::mapped_file file;
     std::string search_mask = "nothing";
-    // std::string file_name = "task.txt";
-    // std::string file_name = "test.bin";
     std::string file_name = "Ulysses.txt";
-    // std::string file_name = "example.txt";
-    // std::string file_name = "dabadee.txt";
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
     if (file.is_open()) {
         Block block(-1, (char*)file.const_data(), file.size(), search_mask);
@@ -166,8 +159,7 @@ int main() {
         split_to_blocks(block, blocks);
         std::vector<std::thread> threads;
         Result empty(0, 0, "");
-        BlockResults emptys;
-        emptys.results.push_back(empty);
+        BlockResults emptys(0, 0, 0, {empty});
         std::vector <BlockResults> results(blocks.size(), emptys);
         for (auto& block : blocks) {
             threads.push_back(std::thread(d_count, block, std::ref(results)));
@@ -175,6 +167,7 @@ int main() {
         for (auto& thread : threads) {
             thread.join();
         }
+        merge_results(results);
         print_results(results);
         file.close();
     }

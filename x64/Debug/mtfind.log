@@ -1,4 +1,3 @@
 ﻿  mtfind.cpp
-C:\Users\abrosa\source\repos\mtfind\mtfind.cpp(50,26): warning C4267: инициализация: преобразование из "size_t" в "int"; возможна потеря данных
-C:\Users\abrosa\source\repos\mtfind\mtfind.cpp(65,33): warning C4267: =: преобразование из "size_t" в "int"; возможна потеря данных
-  mtfind.vcxproj -> C:\Users\abrosa\source\repos\mtfind\x64\Debug\mtfind.exe
+C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppCommon.targets(702,5): error MSB6006: "CL.exe" завершилась с кодом 2.
+C:\Users\abrosa\source\repos\mtfind\mtfind.cpp : fatal  error C1041: невозможно открыть базу данных программы C:\Users\abrosa\source\repos\mtfind\x64\Debug\vc143.idb; если несколько файлов CL.EXE осуществляют запись в один и тот же PDB-файл, воспользуйтесь /FS
