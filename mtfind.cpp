@@ -9,7 +9,7 @@
 #include <chrono>
 #include <ctime>
 
-static const uint64_t MAX_THREADS = 7;
+static const uint64_t MAX_THREADS = 8;
 
 class Block {
 public:
@@ -22,6 +22,7 @@ public:
         this->mask_size = mask_size;
         this->total_lines = total_lines;
     }
+    
     uint64_t n;  // number of block
     uint64_t l;  // number of line in block
     char* begin;
@@ -45,26 +46,26 @@ public:
     std::string found;
 };
 
-bool compare_mask(char* line, char* mask, uint64_t mask_size) {
-    while (line && *line != '\n' && (*mask == '?' || *mask == *line)) {
-        ++line;
-        ++mask;
-        --mask_size;
-        if (mask_size == 0) return true;
-    }
-    return false;
-}
-
-void process_line(Block & line, std::vector <Result> & results) {
-    char* begin = line.begin;
-    uint64_t len = line.size;
-    while (line.begin && len + begin >= line.mask_size + line.begin) {
-        if (compare_mask(line.begin, line.mask, line.mask_size)) {
-            std::string found(line.begin, line.mask_size);
-            Result current(line.n, line.l, 1l + line.begin - begin, found);
+void process_line(Block & block, std::vector <Result> & results) {
+    char* block_begin = block.begin;
+    char* line_begin;
+    char* mask;
+    uint64_t mask_size;
+    while (block.begin && block.size + block_begin >= block.mask_size + block.begin) {
+        line_begin = block.begin;
+        mask = block.mask;
+        mask_size = block.mask_size;
+        while (line_begin && *line_begin != '\n' && (*mask == '?' || *mask == *line_begin)) {
+            ++line_begin;
+            ++mask;
+            --mask_size;
+        }
+        if (mask_size == 0) {
+            std::string found(block.begin, block.mask_size);
+            Result current(block.n, block.l, 1l + block.begin - block_begin, found);
             results.push_back(current);
         }
-        ++line.begin;
+        ++block.begin;
     }
 }
 
@@ -151,13 +152,15 @@ int main(int argc, char* argv[]) {
         file_name = argv[1];
         search_mask = argv[2];
     }
-    uint64_t mask_size = search_mask.length();
-    char* mask = new char[mask_size + 1];
-    strcpy_s(mask, mask_size + 1, search_mask.c_str());
+
+    const uint64_t mask_len = search_mask.length();
+    char* mask = new char[mask_len + 1];
+    strcpy_s(mask, mask_len + 1, search_mask.c_str());
+
     boost::iostreams::mapped_file file;
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
     if (file.is_open()) {
-        Block block(0, 0, (char*)file.const_data(), file.size(), mask, mask_size, 0);
+        Block block(0, 0, (char*)file.const_data(), file.size(), mask, mask_len, 0);
         std::vector<Block> blocks;
         split_to_blocks(block, blocks);
         std::vector <std::thread> threads;
