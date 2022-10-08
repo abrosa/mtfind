@@ -4,32 +4,32 @@
 #include <iostream>
 #include <thread>
 #include <vector>
-#include <format>
-#include <array>
 #include <chrono>
-#include <ctime>
 
 static const uint64_t MAX_THREADS = 8;
+// my home computer have 4 CPU and theoretically 8 Threads
+// but in practice
+// without multithreading time = 16 sec
+// with multithreading time = 4 sec
+
 
 class Block {
 public:
-    Block(uint64_t n, uint64_t l, char* begin, uint64_t size, char* mask, uint64_t mask_size, uint64_t total_lines) {
-        this->n = n;
-        this->l = l;
+    Block(uint64_t number, uint64_t lines, char* begin, uint64_t size, char* mask, uint64_t compare) {
+        this->number = number;
+        this->lines = lines;
         this->begin = begin;
         this->size = size;
         this->mask = mask;
-        this->mask_size = mask_size;
-        this->total_lines = total_lines;
+        this->compare = compare;
     }
     
-    uint64_t n;  // number of block
-    uint64_t l;  // number of line in block
-    char* begin;
-    uint64_t size;
-    char* mask;
-    uint64_t mask_size;
-    uint64_t total_lines;
+    uint64_t number;   // Number of block
+    uint64_t lines;    // number of Lines in block
+    char* begin;       // pointer to Begin
+    uint64_t size;     // Size of data
+    char* mask;        // Mask to compare
+    uint64_t compare;  // bytes to Compare
 };
 
 class Result {
@@ -46,43 +46,44 @@ public:
     std::string found;
 };
 
-void process_line(Block & block, std::vector <Result> & results) {
-    char* block_begin = block.begin;
+void process_line(Block & line, std::vector <Result> & results) {
     char* line_begin;
-    char* mask;
-    uint64_t mask_size;
-    while (block.begin && block.size + block_begin >= block.mask_size + block.begin) {
-        line_begin = block.begin;
-        mask = block.mask;
-        mask_size = block.mask_size;
-        while (line_begin && *line_begin != '\n' && (*mask == '?' || *mask == *line_begin)) {
+    char* line_mask;
+    uint64_t line_compare;
+    for (char* old_begin = line.begin; line.begin; ++line.begin) {
+        line_begin = line.begin;
+        line_mask = line.mask;
+        line_compare = line.compare;
+        while (line_begin && *line_begin != '\n' && (*line_mask == '?' || *line_mask == *line_begin)) {
             ++line_begin;
-            ++mask;
-            --mask_size;
+            ++line_mask;
+            --line_compare;
         }
-        if (mask_size == 0) {
-            std::string found(block.begin, block.mask_size);
-            Result current(block.n, block.l, 1l + block.begin - block_begin, found);
+        if (line_compare == 0) {
+            std::string found(line.begin, line.compare);
+            Result current(line.number, line.lines, line.begin - old_begin + 1, found);
             results.push_back(current);
         }
-        ++block.begin;
+        if (line.begin + line.compare > old_begin + line.size) {
+            break;
+        }
     }
 }
 
 void process_block(Block & block, std::vector <Result> & results) {
-    Result empty(block.n, 0, 0, "");
+    Result empty(block.number, 0, 0, "");
     results.push_back(empty);
-    char* begin = block.begin;
-    uint64_t len = block.size;
-    while (block.begin && len > 0) {
+    for (char* block_begin = block.begin; block.begin; ++block.begin) {
         if (*block.begin == '\n') {
-            Block curr(block.n, block.total_lines, begin, block.begin - begin + 1, block.mask, block.mask_size, 1);
+            Block curr(block.number, block.lines, block_begin, block.begin - block_begin + 1, block.mask, block.compare);
             process_line(curr, results);
-            len -= block.begin + 1 - begin;
-            begin = block.begin + 1;
-            ++block.total_lines;
+            ++block.lines;
+            block.size -= block.begin - block_begin + 1;
+            block_begin = block.begin + 1;
+            if (block.size <= 0) {
+                break;
+            }
         }
-        ++block.begin;
     }
 }
 
@@ -90,11 +91,11 @@ void merge_results(std::vector <Block>& blocks, std::vector <Result>& results) {
     uint64_t total_lines = 1;
     for (auto& block : blocks) {
         for (auto& result : results) {
-            if (result.block == block.n) {
+            if (result.block == block.number) {
                 result.line += total_lines;
             }
         }
-        total_lines += block.total_lines;
+        total_lines += block.lines;
     }
     uint64_t total_found = 0;
     for (auto& result : results) {
@@ -117,8 +118,8 @@ void split_to_blocks(Block& block, std::vector<Block>& blocks)
     uint64_t leftover = block.size;
     uint64_t block_size = leftover / MAX_THREADS;
     while (block.begin && block.size > 0) {
-        ++block.n;
-        if (block.n > MAX_THREADS) {
+        ++block.number;
+        if (block.number > MAX_THREADS) {
             break;
         }
         block.size = std::min(block_size, leftover);
@@ -160,7 +161,7 @@ int main(int argc, char* argv[]) {
     boost::iostreams::mapped_file file;
     file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
     if (file.is_open()) {
-        Block block(0, 0, (char*)file.const_data(), file.size(), mask, mask_len, 0);
+        Block block(0, 0, (char*)file.const_data(), file.size(), mask, mask_len);
         std::vector<Block> blocks;
         split_to_blocks(block, blocks);
         std::vector <std::thread> threads;
