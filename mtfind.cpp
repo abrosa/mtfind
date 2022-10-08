@@ -6,11 +6,10 @@
 #include <vector>
 #include <format>
 #include <array>
+#include <chrono>
+#include <ctime>
 
-// static const size_t MAX_THREADS = 8;
-static const size_t BLOCK_SIZE = 65536;
-
-// Ulysses.txt ~ 23,6 blocks * 65536
+static const size_t MAX_THREADS = 8;
 
 class Block {
 public:
@@ -46,23 +45,13 @@ public:
     std::string found;
 };
 
-bool compare_mask(char* str1, size_t len1, char* str2, size_t len2) {
-    char* line = str1;
-    size_t line_size = len1;
-    char* mask = str2;
-    size_t mask_size = len2;
-
-    if (line_size < mask_size) {
-        return false;
-    }
-
-    while (line && mask && *line != '\n' && mask_size > 0) {
+bool compare_mask(char* line, char* mask, size_t mask_size) {
+    while (*line != '\n' && mask_size > 0) {
         if (*mask != '?' && *mask != *line) {
-            return false;
+            break;
         }
         ++line;
         ++mask;
-        --line_size;
         --mask_size;
     }
     if (mask_size == 0) return true;
@@ -72,8 +61,8 @@ bool compare_mask(char* str1, size_t len1, char* str2, size_t len2) {
 void process_line(Block & line, std::vector <Result> & results) {
     // std::cout << "line (" << line.l << ")" << std::endl;
     int curr_pos = 1;
-    while (line.begin && line.size > 0) {
-        if (compare_mask(line.begin, line.size, line.mask, line.mask_size)) {
+    while (line.begin && line.size >= line.mask_size) {
+        if (compare_mask(line.begin, line.mask, line.mask_size)) {
             std::string found(line.begin, line.mask_size);
             Result current(line.n, line.l, curr_pos, found);
             results.push_back(current);
@@ -135,13 +124,14 @@ void merge_results(std::vector <Block>& blocks, std::vector <Result>& results) {
 void split_to_blocks(Block& block, std::vector<Block>& blocks)
 {
     size_t leftover = block.size;
-    size_t max_blocks = 1 + leftover / BLOCK_SIZE;
+    size_t max_blocks = MAX_THREADS;
+    size_t block_size = leftover / MAX_THREADS;
     while (block.begin && block.size > 0) {
         ++block.n;
         if (block.n > max_blocks) {
             break;
         }
-        block.size = std::min(BLOCK_SIZE, leftover);
+        block.size = std::min(block_size, leftover);
         leftover -= block.size;
         if (block.size <= 0) {
             break;
@@ -160,11 +150,14 @@ void split_to_blocks(Block& block, std::vector<Block>& blocks)
 }
 
 int main(int argc, char* argv[]) {
+    auto start_time = std::chrono::system_clock::now();
+    //std::cout << "process started at " << start_time << std::endl;
+
     std::string file_name;
     std::string search_mask;
     if (argc < 3) {
-        file_name = "Ulysses.txt";
-        search_mask = "?lue";
+        file_name = "test.bin";
+        search_mask = "n?gger";
     }
     else {
         file_name = argv[1];
@@ -184,15 +177,17 @@ int main(int argc, char* argv[]) {
         split_to_blocks(block, blocks);
         std::vector <std::thread> threads;
         std::vector <Result> results;
+        // without multithreading = 21s
+        // for (auto& block : blocks) {
+        //     process_block(block, results);
+        // }
+        // with multithreading = 7s
         for (auto& block : blocks) {
-            process_block(block, results);
+            threads.push_back(std::thread(process_block, std::ref(block), std::ref(results)));
         }
-        //for (auto& block : blocks) {
-        //    threads.push_back(std::thread(process_block, block, std::ref(results)));
-        //}
-        //for (auto& thread : threads) {
-        //    thread.join();
-        //}
+        for (auto& thread : threads) {
+            thread.join();
+        }
         merge_results(blocks, results);
         file.close();
     }
@@ -201,4 +196,10 @@ int main(int argc, char* argv[]) {
     }
 
     delete[] mask;
+
+    auto end_time = std::chrono::system_clock::now();
+    //std::cout << "process finished at " << end_time << std::endl;
+
+    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+    //std::cout << "elapsed seconds: " << elapsed_seconds.count() << "s" << std::endl;
 }
