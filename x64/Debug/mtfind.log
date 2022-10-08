@@ -1,2 +1,3 @@
 ﻿  mtfind.cpp
+C:\Users\abrosa\source\repos\mtfind\mtfind.cpp(60,51): warning C4018: >=: несоответствие типов со знаком и без знака
   mtfind.vcxproj -> C:\Users\abrosa\source\repos\mtfind\x64\Debug\mtfind.exe
