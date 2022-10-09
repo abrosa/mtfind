@@ -1,17 +1,23 @@
 ﻿/* Copyright [2022] <Alexander Abrosov> (aabrosov@gmail.com) */
 
 #include <boost/iostreams/device/mapped_file.hpp>
+#include <boost/iostreams/stream.hpp>
 #include <iostream>
 #include <thread>
 #include <vector>
 #include <chrono>
+#include <fstream>
+
+namespace bio = boost::iostreams;
+
+using namespace std;
+
+ifstream::pos_type filesize(const char* filename) {
+    ifstream in(filename, ifstream::ate | ifstream::binary);
+    return in.tellg();
+}
 
 static const uint64_t MAX_THREADS = 8;
-// my home computer have 4 CPU and theoretically 8 Threads
-// but in practice
-// without multithreading time = 16 sec
-// with multithreading time = 4 sec
-
 
 class Block {
 public:
@@ -34,7 +40,7 @@ public:
 
 class Result {
 public:
-    Result(uint64_t block, uint64_t line, uint64_t position, std::string found) {
+    Result(uint64_t block, uint64_t line, uint64_t position, string found) {
         this->block = block;
         this->line = line;
         this->position = position;
@@ -43,10 +49,10 @@ public:
     uint64_t block;
     uint64_t line;
     uint64_t position;
-    std::string found;
+    string found;
 };
 
-void process_line(Block & line, std::vector <Result> & results) {
+void process_line(Block & line, vector <Result> & results) {
     char* line_begin;
     char* line_mask;
     uint64_t line_compare;
@@ -60,7 +66,7 @@ void process_line(Block & line, std::vector <Result> & results) {
             --line_compare;
         }
         if (line_compare == 0) {
-            std::string found(line.begin, line.compare);
+            string found(line.begin, line.compare);
             Result current(line.number, line.lines, line.begin - old_begin + 1, found);
             results.push_back(current);
         }
@@ -70,7 +76,7 @@ void process_line(Block & line, std::vector <Result> & results) {
     }
 }
 
-void process_block(Block & block, std::vector <Result> & results) {
+void process_block(Block & block, vector <Result> & results) {
     Result empty(block.number, 0, 0, "");
     results.push_back(empty);
     for (char* block_begin = block.begin; block.begin; ++block.begin) {
@@ -87,7 +93,7 @@ void process_block(Block & block, std::vector <Result> & results) {
     }
 }
 
-void merge_results(std::vector <Block>& blocks, std::vector <Result>& results) {
+void merge_results(vector <Block>& blocks, vector <Result>& results) {
     uint64_t total_lines = 1;
     for (auto& block : blocks) {
         for (auto& result : results) {
@@ -103,17 +109,17 @@ void merge_results(std::vector <Block>& blocks, std::vector <Result>& results) {
             ++total_found;
         }
     }
-    std::cout << total_found << std::endl;
+    cout << total_found << endl;
     for (auto& result : results) {
         if (result.position != 0) {
-            std::cout << result.line << " ";
-            std::cout << result.position << " ";
-            std::cout << result.found << std::endl;
+            cout << result.line << " ";
+            cout << result.position << " ";
+            cout << result.found << endl;
         }
     }
 }
 
-void split_to_blocks(Block& block, std::vector<Block>& blocks)
+void split_to_blocks(Block& block, vector<Block>& blocks)
 {
     uint64_t leftover = block.size;
     uint64_t block_size = leftover / MAX_THREADS;
@@ -122,7 +128,7 @@ void split_to_blocks(Block& block, std::vector<Block>& blocks)
         if (block.number > MAX_THREADS) {
             break;
         }
-        block.size = std::min(block_size, leftover);
+        block.size = min(block_size, leftover);
         leftover -= block.size;
         if (block.size <= 0) {
             break;
@@ -141,12 +147,14 @@ void split_to_blocks(Block& block, std::vector<Block>& blocks)
 }
 
 int main(int argc, char* argv[]) {
-    auto start_time = std::chrono::system_clock::now();
-    std::cout << "process started at " << start_time << std::endl;
-    std::string file_name;
-    std::string search_mask;
+
+    auto start_time = chrono::system_clock::now();
+    //cout << "process started at " << start_time << endl;
+
+    string file_name;
+    string search_mask;
     if (argc < 3) {
-        file_name = "test.bin";
+        file_name = "./resources/test.bin";
         search_mask = "n?gger";
     }
     else {
@@ -158,19 +166,29 @@ int main(int argc, char* argv[]) {
     char* mask = new char[mask_len + 1];
     strcpy_s(mask, mask_len + 1, search_mask.c_str());
 
-    boost::iostreams::mapped_file file;
-    file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
+    size_t file_size = filesize(file_name.c_str());
+    
+    //cout << file_size << endl;
+    
+    bio::mapped_file file;
+    bio::mapped_file_params params;
+    params.path = file_name;
+    params.flags = bio::mapped_file::mapmode::readwrite;
+    params.length = file_size + 1;
+    file.open(params);
     if (file.is_open()) {
-        Block block(0, 0, (char*)file.const_data(), file.size(), mask, mask_len);
-        std::vector<Block> blocks;
+        char* data = (char*)file.const_data();
+        data[file_size] = '\n';
+        Block block(0, 0, data, file_size + 1, mask, mask_len);
+        vector<Block> blocks;
         split_to_blocks(block, blocks);
-        std::vector <std::thread> threads;
-        std::vector <Result> results;
+        vector <thread> threads;
+        vector <Result> results;
         //for (auto& block : blocks) {
         //    process_block(block, results);
         //}
         for (auto& block : blocks) {
-           threads.push_back(std::thread(process_block, std::ref(block), std::ref(results)));
+           threads.push_back(thread(process_block, ref(block), ref(results)));
         }
         for (auto& thread : threads) {
             thread.join();
@@ -179,14 +197,14 @@ int main(int argc, char* argv[]) {
         file.close();
     }
     else {
-        std::cout << "could not map the file " << file_name << std::endl;
+        cout << "could not map the file " << file_name << endl;
     }
 
     delete[] mask;
 
-    auto end_time = std::chrono::system_clock::now();
-    std::cout << "process finished at " << end_time << std::endl;
+    auto end_time = chrono::system_clock::now();
+    //cout << "process finished at " << end_time << endl;
 
-    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-    std::cout << "elapsed seconds: " << elapsed_seconds.count() << "s" << std::endl;
+    chrono::duration<double> elapsed_seconds = end_time - start_time;
+    //cout << "elapsed seconds: " << elapsed_seconds.count() << "s" << endl;
 }
