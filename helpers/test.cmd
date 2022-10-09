@@ -1,8 +1,11 @@
 @echo off
-
-.\x64\Debug\mtfind.exe .\task.txt "?ad"
-
-.\x64\Debug\mtfind.exe .\Ulysses.txt "n?t?i?g"
-
-.\x64\Debug\mtfind.exe .\test.bin "w"
-
+pushd ..
+pushd x64
+pushd Debug
+mtfind.exe ../../resources/test.bin "n?gger"
+popd
+popd
+popd
+pause && exit
+rem mtfind.exe ../../resources/task.txt "?ad"
+rem mtfind.exe ../../resources/Ulysses.txt "n?t?i?"

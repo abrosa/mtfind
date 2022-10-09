@@ -154,8 +154,10 @@ int main(int argc, char* argv[]) {
     string file_name;
     string search_mask;
     if (argc < 3) {
-        file_name = "./resources/test.bin";
-        search_mask = "n?gger";
+        //file_name = "./resources/test.bin";
+        //search_mask = "d?sire";
+        cout << "Usage info: mtfind.exe file.txt \"m?sk\"" << endl;
+        return -1;
     }
     else {
         file_name = argv[1];
