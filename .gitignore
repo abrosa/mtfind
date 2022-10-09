@@ -36,3 +36,5 @@
 *.db
 *.bin
 *.vsidx
+.vs/
+x64/
