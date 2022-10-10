@@ -19,23 +19,25 @@ ifstream::pos_type filesize(const char* filename) {
 
 static const uint64_t MAX_THREADS = 8;
 
+static const uint64_t MAX_MASK_LEN = 100;
+
+uint64_t mask_len;
+
 class Block {
 public:
-    Block(uint64_t number, uint64_t lines, char* begin, uint64_t size, char* mask, uint64_t compare) {
+    Block(uint64_t number, uint64_t lines, char* begin, char* end, char* mask) {
         this->number = number;
         this->lines = lines;
         this->begin = begin;
-        this->size = size;
+        this->end = end;
         this->mask = mask;
-        this->compare = compare;
     }
     
     uint64_t number;   // Number of block
     uint64_t lines;    // number of Lines in block
     char* begin;       // pointer to Begin
-    uint64_t size;     // Size of data
+    char* end;     // Size of data
     char* mask;        // Mask to compare
-    uint64_t compare;  // bytes to Compare
 };
 
 class Result {
@@ -58,16 +60,18 @@ void process_block(Block & block, vector <Result> & results) {
     char* b = block.begin;
     char* i;
     char* j;
-    uint64_t k;
-    for (i = block.begin; i < block.begin + block.size; ++i) {
+    char* k;
+    uint64_t l;
+    for (i = block.begin; i <= block.end; ++i) {
         if (i && *i == '\n') {
-            for (j = b; j <= i - block.compare; ++j) {
-                for (k = 0; k < block.compare; ++k) {
-                    if (!(j + k) || *(j + k) == '\n' ||
-                        *(block.mask + k) != '?' && *(block.mask + k) != *(j + k)) break;
+            for (j = b; j <= i - mask_len; ++j) {
+                for (k = j; k < j + mask_len; ++k) {
+                    l = k - j;
+                    if (!k || *k == '\n' ||
+                        *(block.mask + l) != '?' && *(block.mask + l) != *k) break;
                 }
-                if (k == block.compare) {
-                    string found(j, block.compare);
+                if (k - j == mask_len) {
+                    string found(j, mask_len);
                     Result current(block.number, block.lines, j - b + 1, found);
                     results.push_back(current);
                 }
@@ -106,25 +110,27 @@ void merge_results(vector <Block>& blocks, vector <Result>& results) {
 
 void split_to_blocks(Block& block, vector<Block>& blocks)
 {
-    uint64_t leftover = block.size;
+    uint64_t leftover = block.end - block.begin + 1;
     uint64_t block_size = leftover / MAX_THREADS;
-    while (block.begin && block.size > 0) {
+    while (block.begin && block.end) {
         ++block.number;
         if (block.number > MAX_THREADS) {
             break;
         }
-        block.size = min(block_size, leftover);
-        leftover -= block.size;
-        if (block.size <= 0) {
+        block.end = block.begin + min(block_size, leftover) - 1;
+        if (!block.end) {
             break;
         }
-        while (block.begin + block.size - 1 &&
-            *(block.begin + block.size - 1) != '\n' && leftover > 0) {
-            ++block.size;
+        leftover -= block.end - block.begin - 1;
+        while (block.end && *block.end != '\n' && leftover > 0) {
+            ++block.end;
             --leftover;
         }
+        if (!block.end) {
+            break;
+        }
         blocks.push_back(block);
-        block.begin += block.size;
+        block.begin = block.end + 1;
         if (!block.begin) {
             break;
         }
@@ -139,8 +145,8 @@ int main(int argc, char* argv[]) {
     string file_name;
     string search_mask;
     if (argc < 3) {
-        file_name = "./resources/task.txt";
-        search_mask = "?ad";
+        file_name = "./resources/test.bin";
+        search_mask = "n?gger";
         //cout << "Usage info: mtfind.exe file.txt \"m?sk\"" << endl;
         //return -1;
     }
@@ -149,8 +155,8 @@ int main(int argc, char* argv[]) {
         search_mask = argv[2];
     }
 
-    const uint64_t mask_len = search_mask.length();
-    char* mask = new char[mask_len + 1];
+    mask_len = search_mask.length();
+    char* mask = new char[MAX_MASK_LEN + 1];
     strcpy_s(mask, mask_len + 1, search_mask.c_str());
 
     size_t file_size = filesize(file_name.c_str());
@@ -166,7 +172,7 @@ int main(int argc, char* argv[]) {
     if (file.is_open()) {
         char* data = (char*)file.const_data();
         data[file_size] = '\n';
-        Block block(0, 0, data, file_size + 1, mask, mask_len);
+        Block block(0, 0, data, data + file_size, mask);
         vector<Block> blocks;
         split_to_blocks(block, blocks);
         vector <thread> threads;
