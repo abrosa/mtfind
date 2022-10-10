@@ -50,25 +50,20 @@ public:
 void process_block(char* begin, char* end, uint64_t& xblock, vector <Result>& results) {
     Result empty(xblock, 0, "");
     results.push_back(empty);
-    char* b = begin;
+    char* i = begin;
     char* j;
-    uint64_t k;
+    char* k;
     for (; begin <= end; ++begin) {
-        if (begin && *begin == '\n') {
-            for (j = b; j <= begin - mask_len; ++j) {
-                k = 0;
-                while (k < mask_len && (*(mask_str + k) == '?' || *(mask_str + k) == *(j + k))) {
-                    ++k;
-                }
-                if (k == mask_len) {
-                    string found(j, mask_len);
-                    Result current(xblock, j - b + 1, found);
-                    results.push_back(current);
-                }
-            }
-            ++xblock;
-            b = begin + 1;
+        if (*begin != '\n') continue;
+        for (j = i; j <= begin - mask_len; ++j) {
+            for (k = mask_str; k < mask_len + mask_str && (*k == '?' || *k == *(j - mask_str + k)); ++k) {}
+            if (k != mask_str + mask_len) continue;
+            string found(j, mask_len);
+            Result current(xblock, j - i + 1, found);
+            results.push_back(current);
         }
+        ++xblock;
+        i = begin + 1;
     }
 }
 
