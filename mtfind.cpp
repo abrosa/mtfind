@@ -18,26 +18,24 @@ ifstream::pos_type filesize(const char* filename) {
 }
 
 static const uint64_t MAX_THREADS = 8;
-
 static const uint64_t MAX_MASK_LEN = 100;
 
 uint64_t mask_len;
+char* mask_str;
 
 class Block {
 public:
-    Block(uint64_t number, uint64_t lines, char* begin, char* end, char* mask) {
+    Block(uint64_t number, uint64_t lines, char* begin, char* end) {
         this->number = number;
         this->lines = lines;
         this->begin = begin;
         this->end = end;
-        this->mask = mask;
     }
     
     uint64_t number;   // Number of block
     uint64_t lines;    // number of Lines in block
     char* begin;       // pointer to Begin
-    char* end;     // Size of data
-    char* mask;        // Mask to compare
+    char* end;         // pointer to End
 };
 
 class Result {
@@ -60,17 +58,17 @@ void process_block(Block & block, vector <Result> & results) {
     char* b = block.begin;
     char* i;
     char* j;
-    char* k;
-    uint64_t l;
+    uint64_t k;
+    char* l;
     for (i = block.begin; i <= block.end; ++i) {
         if (i && *i == '\n') {
             for (j = b; j <= i - mask_len; ++j) {
-                for (k = j; k < j + mask_len; ++k) {
-                    l = k - j;
-                    if (!k || *k == '\n' ||
-                        *(block.mask + l) != '?' && *(block.mask + l) != *k) break;
+                l = mask_str;
+                for (k = 0; k < mask_len; ++k) {
+                    if (!(j + k) || *(j + k) == '\n' ||
+                        *(l + k) != '?' && *(l + k) != *(j + k)) break;
                 }
-                if (k - j == mask_len) {
+                if (k == mask_len) {
                     string found(j, mask_len);
                     Result current(block.number, block.lines, j - b + 1, found);
                     results.push_back(current);
@@ -156,8 +154,8 @@ int main(int argc, char* argv[]) {
     }
 
     mask_len = search_mask.length();
-    char* mask = new char[MAX_MASK_LEN + 1];
-    strcpy_s(mask, mask_len + 1, search_mask.c_str());
+    mask_str = new char[MAX_MASK_LEN + 1];
+    strcpy_s(mask_str, mask_len + 1, search_mask.c_str());
 
     size_t file_size = filesize(file_name.c_str());
     
@@ -172,7 +170,7 @@ int main(int argc, char* argv[]) {
     if (file.is_open()) {
         char* data = (char*)file.const_data();
         data[file_size] = '\n';
-        Block block(0, 0, data, data + file_size, mask);
+        Block block(0, 0, data, data + file_size);
         vector<Block> blocks;
         split_to_blocks(block, blocks);
         vector <thread> threads;
@@ -193,7 +191,7 @@ int main(int argc, char* argv[]) {
         cout << "could not map the file " << file_name << endl;
     }
 
-    delete[] mask;
+    delete[] mask_str;
 
     auto end_time = chrono::system_clock::now();
     //cout << "process finished at " << end_time << endl;
