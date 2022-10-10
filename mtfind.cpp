@@ -53,25 +53,17 @@ public:
 };
 
 void process_line(Block & line, vector <Result> & results) {
-    char* line_begin;
-    char* line_mask;
-    uint64_t line_compare;
-    for (char* old_begin = line.begin; line.begin; ++line.begin) {
-        line_begin = line.begin;
-        line_mask = line.mask;
-        line_compare = line.compare;
-        while (line_begin && *line_begin != '\n' && (*line_mask == '?' || *line_mask == *line_begin)) {
-            ++line_begin;
-            ++line_mask;
-            --line_compare;
+    uint64_t k = 0;
+    for (char* j = line.begin; j <= line.begin + line.size - line.compare ; ++j) {
+        for (k = 0; k < line.compare; ++k) {
+            if (!(j + k) || *(j + k) == '\n') break;
+            if (*(line.mask + k) != '?' && *(line.mask + k) != *(j + k)) break;
+            
         }
-        if (line_compare == 0) {
-            string found(line.begin, line.compare);
-            Result current(line.number, line.lines, line.begin - old_begin + 1, found);
+        if (k == line.compare) {
+            string found(j, line.compare);
+            Result current(line.number, line.lines, j - line.begin + 1, found);
             results.push_back(current);
-        }
-        if (line.begin + line.compare > old_begin + line.size) {
-            break;
         }
     }
 }
@@ -79,16 +71,25 @@ void process_line(Block & line, vector <Result> & results) {
 void process_block(Block & block, vector <Result> & results) {
     Result empty(block.number, 0, 0, "");
     results.push_back(empty);
-    for (char* block_begin = block.begin; block.begin; ++block.begin) {
-        if (*block.begin == '\n') {
-            Block curr(block.number, block.lines, block_begin, block.begin - block_begin + 1, block.mask, block.compare);
-            process_line(curr, results);
-            ++block.lines;
-            block.size -= block.begin - block_begin + 1;
-            block_begin = block.begin + 1;
-            if (block.size <= 0) {
-                break;
+    char* b = block.begin;
+    char* i = block.begin;
+    char* j = block.begin;
+    uint64_t k = 0;
+    for (i = block.begin; i <= block.begin + block.size; ++i) {
+        if (i && *i == '\n') {
+            for (j = b; j <= i + 1 - block.compare; ++j) {
+                for (k = 0; k < block.compare; ++k) {
+                    if (!(j + k) || *(j + k) == '\n') break;
+                    if (*(block.mask + k) != '?' && *(block.mask + k) != *(j + k)) break;
+                }
+                if (k == block.compare) {
+                    string found(j, block.compare);
+                    Result current(block.number, block.lines, j - b + 1, found);
+                    results.push_back(current);
+                }
             }
+            ++block.lines;
+            b = i + 1;
         }
     }
 }
@@ -154,10 +155,10 @@ int main(int argc, char* argv[]) {
     string file_name;
     string search_mask;
     if (argc < 3) {
-        //file_name = "./resources/test.bin";
-        //search_mask = "d?sire";
-        cout << "Usage info: mtfind.exe file.txt \"m?sk\"" << endl;
-        return -1;
+        file_name = "./resources/test.bin";
+        search_mask = "d?sire";
+        //cout << "Usage info: mtfind.exe file.txt \"m?sk\"" << endl;
+        //return -1;
     }
     else {
         file_name = argv[1];
@@ -208,5 +209,5 @@ int main(int argc, char* argv[]) {
     //cout << "process finished at " << end_time << endl;
 
     chrono::duration<double> elapsed_seconds = end_time - start_time;
-    //cout << "elapsed seconds: " << elapsed_seconds.count() << "s" << endl;
+    cout << "elapsed seconds: " << elapsed_seconds.count() << "s" << endl;
 }
