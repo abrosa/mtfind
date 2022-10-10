@@ -52,35 +52,19 @@ public:
     string found;
 };
 
-void process_line(Block & line, vector <Result> & results) {
-    uint64_t k = 0;
-    for (char* j = line.begin; j <= line.begin + line.size - line.compare ; ++j) {
-        for (k = 0; k < line.compare; ++k) {
-            if (!(j + k) || *(j + k) == '\n') break;
-            if (*(line.mask + k) != '?' && *(line.mask + k) != *(j + k)) break;
-            
-        }
-        if (k == line.compare) {
-            string found(j, line.compare);
-            Result current(line.number, line.lines, j - line.begin + 1, found);
-            results.push_back(current);
-        }
-    }
-}
-
 void process_block(Block & block, vector <Result> & results) {
     Result empty(block.number, 0, 0, "");
     results.push_back(empty);
     char* b = block.begin;
-    char* i = block.begin;
-    char* j = block.begin;
-    uint64_t k = 0;
-    for (i = block.begin; i <= block.begin + block.size; ++i) {
+    char* i;
+    char* j;
+    uint64_t k;
+    for (i = block.begin; i < block.begin + block.size; ++i) {
         if (i && *i == '\n') {
-            for (j = b; j <= i + 1 - block.compare; ++j) {
+            for (j = b; j <= i - block.compare; ++j) {
                 for (k = 0; k < block.compare; ++k) {
-                    if (!(j + k) || *(j + k) == '\n') break;
-                    if (*(block.mask + k) != '?' && *(block.mask + k) != *(j + k)) break;
+                    if (!(j + k) || *(j + k) == '\n' ||
+                        *(block.mask + k) != '?' && *(block.mask + k) != *(j + k)) break;
                 }
                 if (k == block.compare) {
                     string found(j, block.compare);
@@ -155,8 +139,8 @@ int main(int argc, char* argv[]) {
     string file_name;
     string search_mask;
     if (argc < 3) {
-        file_name = "./resources/test.bin";
-        search_mask = "d?sire";
+        file_name = "./resources/task.txt";
+        search_mask = "?ad";
         //cout << "Usage info: mtfind.exe file.txt \"m?sk\"" << endl;
         //return -1;
     }
