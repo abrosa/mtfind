@@ -59,14 +59,12 @@ void process_block(Block & block, vector <Result> & results) {
     char* i;
     char* j;
     uint64_t k;
-    char* l;
     for (i = block.begin; i <= block.end; ++i) {
         if (i && *i == '\n') {
             for (j = b; j <= i - mask_len; ++j) {
-                l = mask_str;
-                for (k = 0; k < mask_len; ++k) {
-                    if (!(j + k) || *(j + k) == '\n' ||
-                        *(l + k) != '?' && *(l + k) != *(j + k)) break;
+                k = 0;
+                while (k < mask_len && (*(mask_str + k) == '?' || *(mask_str + k) == *(j + k))) {
+                    ++k;
                 }
                 if (k == mask_len) {
                     string found(j, mask_len);
