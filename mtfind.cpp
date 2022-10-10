@@ -93,9 +93,8 @@ void merge_results(vector <uint64_t>& xblocks, vector <Result>& results) {
     }
 }
 
-void split_to_blocks(Block& block, vector<Block>& blocks)
-{
-    uint64_t leftover = block.end - block.begin + 1;
+void split_to_blocks(char* data, uint64_t leftover, vector<Block>& blocks) {
+    Block block(0, data, data + leftover - 1);
     uint64_t block_size = leftover / MAX_THREADS;
     while (block.begin && block.end) {
         block.xblock += 0x100000000;
@@ -123,7 +122,6 @@ void split_to_blocks(Block& block, vector<Block>& blocks)
 }
 
 int main(int argc, char* argv[]) {
-
     auto start_time = chrono::system_clock::now();
     //cout << "process started at " << start_time << endl;
 
@@ -143,11 +141,7 @@ int main(int argc, char* argv[]) {
     mask_len = search_mask.length();
     mask_str = new char[MAX_MASK_LEN + 1];
     strcpy_s(mask_str, mask_len + 1, search_mask.c_str());
-
     size_t file_size = filesize(file_name.c_str());
-    
-    //cout << file_size << endl;
-    
     bio::mapped_file file;
     bio::mapped_file_params params;
     params.path = file_name;
@@ -157,14 +151,10 @@ int main(int argc, char* argv[]) {
     if (file.is_open()) {
         char* data = (char*)file.const_data();
         data[file_size] = '\n';
-        Block block(0, data, data + file_size);
         vector <Block> blocks;
-        split_to_blocks(block, blocks);
+        split_to_blocks(data, file_size + 1, blocks);
         vector <thread> threads;
         vector <Result> results;
-        //for (auto& block : blocks) {
-        //    process_block(block, results);
-        //}
         vector <uint64_t> xblocks;
         for (auto& block : blocks) {
             uint64_t xblock = block.xblock;
