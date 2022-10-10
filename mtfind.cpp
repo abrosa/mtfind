@@ -17,7 +17,7 @@ ifstream::pos_type filesize(const char* filename) {
     return in.tellg();
 }
 
-static const uint64_t MAX_THREADS = 8;
+static const uint64_t MAX_THREADS = 16;
 static const uint64_t MAX_MASK_LEN = 100;
 
 uint64_t mask_len;
@@ -25,68 +25,62 @@ char* mask_str;
 
 class Block {
 public:
-    Block(uint64_t number, uint64_t lines, char* begin, char* end) {
-        this->number = number;
-        this->lines = lines;
+    Block(uint64_t xblock, char* begin, char* end) {
+        this->xblock = xblock;
         this->begin = begin;
         this->end = end;
     }
-    
-    uint64_t number;   // Number of block
-    uint64_t lines;    // number of Lines in block
+    uint64_t xblock;   // block num in 32 bits and line num in 32 bits
     char* begin;       // pointer to Begin
     char* end;         // pointer to End
 };
 
 class Result {
 public:
-    Result(uint64_t block, uint64_t line, uint64_t position, string found) {
-        this->block = block;
-        this->line = line;
+    Result(uint64_t xblock, uint64_t position, string found) {
+        this->xblock = xblock;
         this->position = position;
         this->found = found;
     }
-    uint64_t block;
-    uint64_t line;
+    uint64_t xblock;
     uint64_t position;
     string found;
 };
 
-void process_block(Block & block, vector <Result> & results) {
-    Result empty(block.number, 0, 0, "");
+void process_block(char* begin, char* end, uint64_t& xblock, vector <Result>& results) {
+    Result empty(xblock, 0, "");
     results.push_back(empty);
-    char* b = block.begin;
-    char* i;
+    char* b = begin;
     char* j;
     uint64_t k;
-    for (i = block.begin; i <= block.end; ++i) {
-        if (i && *i == '\n') {
-            for (j = b; j <= i - mask_len; ++j) {
+    for (; begin <= end; ++begin) {
+        if (begin && *begin == '\n') {
+            for (j = b; j <= begin - mask_len; ++j) {
                 k = 0;
                 while (k < mask_len && (*(mask_str + k) == '?' || *(mask_str + k) == *(j + k))) {
                     ++k;
                 }
                 if (k == mask_len) {
                     string found(j, mask_len);
-                    Result current(block.number, block.lines, j - b + 1, found);
+                    Result current(xblock, j - b + 1, found);
                     results.push_back(current);
                 }
             }
-            ++block.lines;
-            b = i + 1;
+            ++xblock;
+            b = begin + 1;
         }
     }
 }
 
-void merge_results(vector <Block>& blocks, vector <Result>& results) {
+void merge_results(vector <uint64_t>& xblocks, vector <Result>& results) {
     uint64_t total_lines = 1;
-    for (auto& block : blocks) {
+    for (auto& xblock : xblocks) {
         for (auto& result : results) {
-            if (result.block == block.number) {
-                result.line += total_lines;
+            if (result.xblock >> 32 == xblock >> 32) {
+                result.xblock += total_lines;
             }
         }
-        total_lines += block.lines;
+        total_lines += xblock & 0xffffffff;
     }
     uint64_t total_found = 0;
     for (auto& result : results) {
@@ -97,7 +91,7 @@ void merge_results(vector <Block>& blocks, vector <Result>& results) {
     cout << total_found << endl;
     for (auto& result : results) {
         if (result.position != 0) {
-            cout << result.line << " ";
+            cout << (result.xblock & 0xffffffff) << " ";
             cout << result.position << " ";
             cout << result.found << endl;
         }
@@ -109,8 +103,8 @@ void split_to_blocks(Block& block, vector<Block>& blocks)
     uint64_t leftover = block.end - block.begin + 1;
     uint64_t block_size = leftover / MAX_THREADS;
     while (block.begin && block.end) {
-        ++block.number;
-        if (block.number > MAX_THREADS) {
+        block.xblock += 0x100000000;
+        if ((block.xblock >> 32) > MAX_THREADS) {
             break;
         }
         block.end = block.begin + min(block_size, leftover) - 1;
@@ -168,21 +162,24 @@ int main(int argc, char* argv[]) {
     if (file.is_open()) {
         char* data = (char*)file.const_data();
         data[file_size] = '\n';
-        Block block(0, 0, data, data + file_size);
-        vector<Block> blocks;
+        Block block(0, data, data + file_size);
+        vector <Block> blocks;
         split_to_blocks(block, blocks);
         vector <thread> threads;
         vector <Result> results;
         //for (auto& block : blocks) {
         //    process_block(block, results);
         //}
+        vector <uint64_t> xblocks;
         for (auto& block : blocks) {
-           threads.push_back(thread(process_block, ref(block), ref(results)));
+            uint64_t xblock = block.xblock;
+            threads.push_back(thread(process_block, block.begin, block.end, ref(xblock), ref(results)));
+            xblocks.push_back(xblock);
         }
         for (auto& thread : threads) {
             thread.join();
         }
-        merge_results(blocks, results);
+        merge_results(xblocks, results);
         file.close();
     }
     else {
