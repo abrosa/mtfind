@@ -45,16 +45,14 @@ public:
 };
 
 void process_block(Block & block, std::vector <Result> & results) {
-    char* block_begin = block.begin;
-    char* block_end = block.end;
-    char* i = block_begin;
+    char* i = block.begin;
     char* j;
     uint64_t k;
-    for (; block_begin < block_end; ++block_begin) {
+    for (char* block_begin = block.begin; block_begin < block.end; ++block_begin) {
         if (*block_begin != '\n') {
             continue;
         }
-        for (j = i; j < block_begin - 1; ++j) {
+        for (j = i; j < block_begin - mask_len; ++j) {
             for (k = 0; k < mask_len; ++k) {
                 if (!(j + k) || *(j + k) == '\n') break;
                 if (!mask_str[k] || mask_str[k] == '\0') break;
@@ -69,7 +67,7 @@ void process_block(Block & block, std::vector <Result> & results) {
         }
         ++block.lines;
         i = block_begin + 1;
-        if (i > block_end) {
+        if (!i || i > block.end) {
             break;
         }
     }
