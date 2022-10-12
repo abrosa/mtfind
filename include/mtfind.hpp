@@ -33,9 +33,10 @@ namespace mtfind {
 
     void process_block(Block& block);
 
-    void merge_results(std::vector <Block>& blocks, std::vector <Result>& results);
+    void merge_results(std::vector <Block>& blocks);
 
     void split_to_blocks(char* file_begin, uint64_t file_size, std::vector<Block>& blocks);
 
-    //int main(int argc, char* argv[]);
 }
+
+int main(int argc, char* argv[]);

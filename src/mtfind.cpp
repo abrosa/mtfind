@@ -1,8 +1,6 @@
 ﻿/* Copyright [2022] <Alexander Abrosov> (aabrosov@gmail.com) */
 
-#include <mtfind.hpp>
-#include <noregex.hpp>
-#include <regex.hpp>
+#include <../include/mtfind.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <iostream>
 #include <thread>
@@ -125,20 +123,17 @@ namespace mtfind {
         auto time2 = std::chrono::system_clock::to_time_t(now2);
         //std::cout << ctime(&time2) << std::endl;
         std::chrono::duration<double> elapsed_seconds = now2 - now1;
-        std::cout << "multi-threads: " << elapsed_seconds.count() << "s" << std::endl;
+        //std::cout << "multi-threads: " << elapsed_seconds.count() << "s" << std::endl;
         return 0;
     }
 }
 
 int main(int argc, char* argv[]) {
-    std::string file_name = "./resources/hugetext.bin";
-    std::string search_mask1 = "n?gger";
-    std::string search_mask2 = "n.gger";
+    std::string file_name = "./resources/test.bin";
+    std::string search_mask = "n?gger";
     if (argc >= 3) {
         file_name = argv[1];
-        search_mask1 = argv[2];
+        search_mask = argv[2];
     }
-    mtfind::process_data(file_name, search_mask1);
-    noregex::process_data(file_name, search_mask1);
-    regex::process_data(file_name, search_mask2);
+    mtfind::process_data(file_name, search_mask);
 }

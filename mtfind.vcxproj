@@ -150,7 +150,6 @@
     <None Include=".project" />
     <None Include="helpers\generator.py" />
     <None Include="helpers\test.cmd" />
-    <None Include="Makefile" />
     <None Include="README.md" />
     <None Include="resources\hugetext.bin" />
     <None Include="resources\test.bin" />
@@ -166,13 +165,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\mtfind.cpp" />
-    <ClCompile Include="src\noregex.cpp" />
-    <ClCompile Include="src\regex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\mtfind.hpp" />
-    <ClInclude Include="include\noregex.hpp" />
-    <ClInclude Include="include\regex.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
