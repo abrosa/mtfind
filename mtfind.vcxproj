@@ -71,8 +71,9 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\msys64\boost_1_80_0;$(IncludePath)</IncludePath>
+    <IncludePath>include;C:\msys64\boost_1_80_0;$(IncludePath)</IncludePath>
     <LibraryPath>C:\msys64\boost_1_80_0\stage\lib;$(LibraryPath)</LibraryPath>
+    <SourcePath>src;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\msys64\boost_1_80_0;$(IncludePath)</IncludePath>
@@ -145,7 +146,33 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="mtfind.cpp" />
+    <None Include=".gitignore" />
+    <None Include=".project" />
+    <None Include="helpers\generator.py" />
+    <None Include="helpers\test.cmd" />
+    <None Include="Makefile" />
+    <None Include="README.md" />
+    <None Include="resources\hugetext.bin" />
+    <None Include="resources\test.bin" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+    <Text Include="docs\C++__v3.txt" />
+    <Text Include="resources\dabadee.txt" />
+    <Text Include="resources\example.txt" />
+    <Text Include="resources\task.txt" />
+    <Text Include="resources\Ulysses.txt" />
+    <Text Include="src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\mtfind.cpp" />
+    <ClCompile Include="src\noregex.cpp" />
+    <ClCompile Include="src\regex.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\mtfind.hpp" />
+    <ClInclude Include="include\noregex.hpp" />
+    <ClInclude Include="include\regex.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

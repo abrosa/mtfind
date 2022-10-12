@@ -1,4 +1,4 @@
-filename="../mtfind/resources/hugetext.bin"
+filename="./resources/hugetext.bin"
 mask1="n?gger"
 mask2="n.gger"
 

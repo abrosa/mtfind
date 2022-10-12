@@ -15,8 +15,48 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="mtfind.cpp">
+    <None Include="Makefile" />
+    <None Include="README.md" />
+    <None Include=".project" />
+    <None Include=".gitignore" />
+    <None Include="resources\hugetext.bin">
+      <Filter>Файлы ресурсов</Filter>
+    </None>
+    <None Include="resources\test.bin">
+      <Filter>Файлы ресурсов</Filter>
+    </None>
+    <None Include="helpers\generator.py" />
+    <None Include="helpers\test.cmd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="resources\dabadee.txt" />
+    <Text Include="resources\example.txt" />
+    <Text Include="resources\task.txt" />
+    <Text Include="resources\Ulysses.txt" />
+    <Text Include="docs\C++__v3.txt" />
+    <Text Include="CMakeLists.txt" />
+    <Text Include="src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\regex.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="src\noregex.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mtfind.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\mtfind.hpp">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="include\noregex.hpp">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="include\regex.hpp">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
