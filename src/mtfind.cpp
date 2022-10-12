@@ -131,7 +131,7 @@ namespace mtfind {
 }
 
 int main(int argc, char* argv[]) {
-    std::string file_name = "./resources/Ulysses.txt";
+    std::string file_name = "./resources/hugetext.bin";
     std::string search_mask1 = "n?gger";
     std::string search_mask2 = "n.gger";
     if (argc >= 3) {
