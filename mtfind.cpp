@@ -18,34 +18,34 @@ static uint64_t mask_len;
 
 class Block {
 public:
-    Block(uint64_t number, uint64_t lines, char* begin, char* end) {
-        this->number = number;
-        this->lines = lines;
+    Block(uint64_t pos, char* begin, char* end) {
+        this->pos = pos;
         this->begin = begin;
         this->end = end;
     }
-    uint64_t number;
-    uint64_t lines;
+    uint64_t pos;  // pos = (block << 32) | lines
     char* begin;
     char* end;
 };
 
 class Result {
 public:
-    Result(uint64_t block, uint64_t line, uint64_t position, std::string found) {
-        this->block = block;
-        this->line = line;
-        this->position = position;
+    Result(uint64_t pos, uint64_t symbol, std::string found) {
+        this->pos = pos;
+        this->symbol = symbol;
         this->found = found;
     }
-    uint64_t block;
-    uint64_t line;
-    uint64_t position;
+    uint64_t pos;  // pos = (block << 32) | lines
+    uint64_t symbol;
     std::string found;
+
+    bool operator < (const Result& res) const
+    {
+        return (pos < res.pos);
+    }
 };
 
 void process_block(Block & block, std::vector <Result> & results) {
-    //std::cout << "[" << block.number << "'" << block.end - block.begin + 1 << "]" << std::endl;
     char* i = block.begin;
     char* j;
     uint64_t k;
@@ -63,10 +63,10 @@ void process_block(Block & block, std::vector <Result> & results) {
                 continue;
             }
             std::string found(j, mask_len);
-            Result current(block.number, block.lines, j - i + 1, found);
+            Result current(block.pos, j - i + 1, found);
             results.push_back(current);
         }
-        ++block.lines;
+        ++block.pos;
         i = block_begin + 1;
         if (!i || i > block.end) {
             break;
@@ -78,23 +78,26 @@ void merge_results(std::vector <Block>& blocks, std::vector <Result>& results) {
     uint64_t total_lines = 1;
     for (auto& block : blocks) {
         for (auto& result : results) {
-            if (result.block == block.number) {
-                result.line += total_lines;
+            if (result.pos >> 32 == block.pos >> 32) {
+                result.pos += total_lines;
             }
         }
-        total_lines += block.lines;
+        total_lines += block.pos & 0xFFFFFFFF;
     }
     uint64_t total_found = 0;
     for (auto& result : results) {
-        if (result.position != 0) {
+        if (result.symbol != 0) {
             ++total_found;
         }
     }
     std::cout << total_found << std::endl;
+
+    std::sort(results.begin(), results.end());
+
     for (auto& result : results) {
-        if (result.position != 0) {
-            std::cout << result.line << " ";
-            std::cout << result.position << " ";
+        if (result.symbol != 0) {
+            std::cout << (result.pos & 0xFFFFFFFF) << " ";
+            std::cout << result.symbol << " ";
             std::cout << result.found << std::endl;
         }
     }
@@ -104,8 +107,7 @@ void split_to_blocks(char* file_begin, uint64_t file_size, std::vector<Block>& b
     char* block_begin = file_begin;
     uint64_t block_size;
     char* block_end;
-    uint64_t block_number = 0;
-    uint64_t block_lines = 0;
+    uint64_t block_pos = 0;
     uint64_t avg_block_size = file_size / MAX_THREADS;
     while (block_begin && block_size > 0) {
         block_size = std::min(avg_block_size, file_size);
@@ -114,15 +116,15 @@ void split_to_blocks(char* file_begin, uint64_t file_size, std::vector<Block>& b
             ++block_size;
             ++block_end;
         }
-        Block new_block(block_number, block_lines, block_begin, block_end);
+        Block new_block(block_pos, block_begin, block_end);
         blocks.push_back(new_block);
         block_begin = block_end + 1;
         if (!block_begin) {
             break;
         }
         file_size -= block_size;
-        ++block_number;
-        if (block_number >= MAX_THREADS) {
+        block_pos += 0x100000000;
+        if ((block_pos >> 32) >= MAX_THREADS) {
             break;
         }
     }
@@ -135,12 +137,8 @@ int main(int argc, char* argv[]) {
     std::string file_name;
     std::string search_mask;
     if (argc < 3) {
-        //file_name = "../mtfind/resources/hugetext.bin";
-        //search_mask = "n?gger";
-        //file_name = "../mtfind/resources/Ulysses.txt";
-        //search_mask = "n?t?i?g";
-        file_name = "../mtfind/resources/dabadee.txt";
-        search_mask = "??ue";
+        file_name = "./resources/hugetext.bin";
+        search_mask = "n?gger";
     }
     else {
         file_name = argv[1];
