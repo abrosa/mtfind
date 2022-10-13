@@ -149,7 +149,6 @@
     <None Include=".gitignore" />
     <None Include=".project" />
     <None Include="helpers\generator.py" />
-    <None Include="helpers\test.cmd" />
     <None Include="README.md" />
     <None Include="resources\hugetext.bin" />
     <None Include="resources\test.bin" />
@@ -159,6 +158,7 @@
     <Text Include="docs\C++__v3.txt" />
     <Text Include="resources\dabadee.txt" />
     <Text Include="resources\example.txt" />
+    <Text Include="resources\multiple.txt" />
     <Text Include="resources\task.txt" />
     <Text Include="resources\Ulysses.txt" />
     <Text Include="src\CMakeLists.txt" />
