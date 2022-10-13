@@ -25,31 +25,19 @@ namespace mtfind {
             if (*c != '\n' && c != block.end) {
                 continue;
             }
-            j = i;
-            while (j <= c - mlen + 1) {
+            for (j = i; j <= c - mlen + 1; ++j) {
                 mc = *mask;
+                for (jc = *j; j <= c - mlen + 1 && mc != '?' && mc != jc; jc = *j++) {}
                 jc = *j;
-                while (j <= c - mlen + 1) {
-                    if (mc == '?' || mc == jc) break;
-                    jc = *j++;
+                for (k = 0;
+                    k < mlen && jc != '\n' && mc != '\0' && (mc == '?' || mc == jc);
+                    ++k, mc = *(mask + k), jc = *(j + k)) {}
+                if (k == mlen && jc != '\n') {
+                    std::string found(j, mlen);
+                    Result current(line, j - i + 1, found);
+                    results.push_back(current);
+                    j += mlen;
                 }
-                k = 0;
-                while (k < mlen) {
-                    if (jc == '\n') break;
-                    if (mc == '\0') break;
-                    if (mc != '?' && mc != jc) break;
-                    ++k;
-                    mc = *(mask + k);
-                    jc = *(j + k);
-                }
-                if (k != mlen || jc == '\n') {
-                    ++j;
-                    continue;
-                }
-                std::string found(j, mlen);
-                Result current(line, j - i + 1, found);
-                results.push_back(current);
-                j += mlen;
             }
             ++line;
             i = c + 1;
