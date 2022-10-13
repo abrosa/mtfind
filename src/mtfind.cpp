@@ -7,7 +7,7 @@
 #include <vector>
 #include <chrono>
 
-static const uint64_t MAX_THREADS = 8;
+static const uint64_t MAX_THREADS = 16;
 static const uint64_t MAX_MASK_LENGTH = 100;
 static char mask_str[MAX_MASK_LENGTH];
 static uint64_t mask_len;
@@ -18,25 +18,28 @@ namespace mtfind {
         uint64_t line = 0;
         char* i = block.begin;
         char* j;
-        uint64_t k;
-        char* m;
+        uint64_t k = 0;
         for (char* c = block.begin; c && c <= block.end; ++c) {
-            if (*c != '\n') {
+            if (*c != '\n' && c != block.end) {
                 continue;
             }
-            for (j = i; j && j <= c; ++j) {
-                m = mask_str;
-                for (k = 0; k < mask_len; ++k) {
-                    if (!(j+k) || *(j+k) == '\n') break;
-                    if (!(m+k) || *(m+k) == '\0') break;
-                    if (*(m+k) != '?' && *(m+k) != *(j+k)) break;
+            j = i;
+            while (j && j <= c - mask_len + 1) {
+                while (j && j <= c - mask_len + 1 && *mask_str != '?' && *mask_str != *j) {
+                    ++j;
+                }
+                k = 0;
+                while (k < mask_len && (*(mask_str + k) == '?' || *(mask_str + k) == *(j + k))) {
+                    ++k;
                 }
                 if (k != mask_len) {
+                    ++j;
                     continue;
                 }
                 std::string found(j, mask_len);
                 Result current(line, j - i + 1, found);
                 results.push_back(current);
+                j += mask_len;
             }
             ++line;
             i = c + 1;
@@ -72,25 +75,30 @@ namespace mtfind {
     }
 
     void split_to_blocks(char* file_begin, uint64_t file_size, std::vector<Block>& blocks) {
-        char* block_begin = file_begin;
-        uint64_t block_size = file_size;
-        char* block_end;
         uint64_t avg_block_size = file_size / MAX_THREADS;
-        while (block_begin && block_size > 0) {
-            block_size = std::min(avg_block_size, file_size);
-            block_end = block_begin + block_size - 1;
-            while (block_size != 0 && block_end && *block_end != '\n') {
+        char* file_end = file_begin + file_size - 1;
+
+        char* block_begin = file_begin;
+        uint64_t block_size = avg_block_size;
+        char* block_end = block_begin + block_size - 1;
+
+        while (true) {
+            while (block_end < file_end && *block_end != '\n') {
                 ++block_size;
                 ++block_end;
             }
+
             Result empty(0, 0, "");
             Block new_block(block_begin, block_end, {empty});
             blocks.push_back(new_block);
-            block_begin = block_end + 1;
-            if (!block_begin) {
+
+            if (block_end == file_end) {
                 break;
             }
-            file_size -= block_size;
+
+            block_begin = block_end + 1;
+            block_size = avg_block_size;
+            block_end = block_begin + block_size - 1;
         }
     }
 
@@ -123,14 +131,14 @@ namespace mtfind {
         auto time2 = std::chrono::system_clock::to_time_t(now2);
         //std::cout << ctime(&time2) << std::endl;
         std::chrono::duration<double> elapsed_seconds = now2 - now1;
-        //std::cout << "multi-threads: " << elapsed_seconds.count() << "s" << std::endl;
+        std::cout << "multi-threads: " << elapsed_seconds.count() << "s" << std::endl;
         return 0;
     }
 }
 
 int main(int argc, char* argv[]) {
-    std::string file_name = "./resources/test.bin";
-    std::string search_mask = "n?gger";
+    std::string file_name = "./resources/multiple.txt";
+    std::string search_mask = "h???o";
     if (argc >= 3) {
         file_name = argv[1];
         search_mask = argv[2];
