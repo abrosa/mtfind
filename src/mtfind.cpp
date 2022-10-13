@@ -9,8 +9,8 @@
 
 static const uint64_t MAX_THREADS = 16;
 static const uint64_t MAX_MASK_LENGTH = 100;
-static char mask_str[MAX_MASK_LENGTH];
-static uint64_t mask_len;
+static char mask[MAX_MASK_LENGTH];
+static uint64_t mlen;
 
 namespace mtfind {
     void process_block(Block & block) {
@@ -19,27 +19,37 @@ namespace mtfind {
         char* i = block.begin;
         char* j;
         uint64_t k = 0;
+        char mc;
+        char jc;
         for (char* c = block.begin; c && c <= block.end; ++c) {
             if (*c != '\n' && c != block.end) {
                 continue;
             }
             j = i;
-            while (j && j <= c - mask_len + 1) {
-                while (j && j <= c - mask_len + 1 && *mask_str != '?' && *mask_str != *j) {
-                    ++j;
+            while (j <= c - mlen + 1) {
+                mc = *mask;
+                jc = *j;
+                while (j <= c - mlen + 1) {
+                    if (mc == '?' || mc == jc) break;
+                    jc = *j++;
                 }
                 k = 0;
-                while (k < mask_len && (*(mask_str + k) == '?' || *(mask_str + k) == *(j + k))) {
+                while (k < mlen) {
+                    if (jc == '\n') break;
+                    if (mc == '\0') break;
+                    if (mc != '?' && mc != jc) break;
                     ++k;
+                    mc = *(mask + k);
+                    jc = *(j + k);
                 }
-                if (k != mask_len) {
+                if (k != mlen || jc == '\n') {
                     ++j;
                     continue;
                 }
-                std::string found(j, mask_len);
+                std::string found(j, mlen);
                 Result current(line, j - i + 1, found);
                 results.push_back(current);
-                j += mask_len;
+                j += mlen;
             }
             ++line;
             i = c + 1;
@@ -106,8 +116,8 @@ namespace mtfind {
         auto now1 = std::chrono::system_clock::now();
         auto time1 = std::chrono::system_clock::to_time_t(now1);
         //std::cout << ctime(&time1) << std::endl;
-        mask_len = search_mask.length();
-        strcpy_s(mask_str, mask_len + 1, search_mask.c_str());
+        mlen = search_mask.length();
+        strcpy_s(mask, mlen + 1, search_mask.c_str());
         boost::iostreams::mapped_file file;
         file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
         if (file.is_open()) {
@@ -137,8 +147,8 @@ namespace mtfind {
 }
 
 int main(int argc, char* argv[]) {
-    std::string file_name = "./resources/multiple.txt";
-    std::string search_mask = "h???o";
+    std::string file_name = "./resources/test.bin";
+    std::string search_mask = "??fuck??";
     if (argc >= 3) {
         file_name = argv[1];
         search_mask = argv[2];
