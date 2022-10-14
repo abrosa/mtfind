@@ -8,11 +8,7 @@ namespace compare_mask {
     void apply_it(uint64_t & l, uint64_t & m, uint64_t & mask_len) {
         for (int i = 0; i < CHARS_IN_X64; ++i) {
             if (mask_len > 0) {
-                if ((l & f[i]) == n[i]) {
-                    mask_len = 0;
-                    break;
-                }
-                if ((m & f[i]) == q[i]) {
+                if ((m & f[i]) == q[i] && (l & f[i]) != n[i]) {
                     l &= ~f[i];
                     l |= q[i];
                 }

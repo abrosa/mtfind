@@ -1,19 +1,43 @@
 ﻿/* Copyright [2022] <Alexander Abrosov> (aabrosov@gmail.com) */
 
 #include <../include/mtfind.hpp>
-#include <../include/compare_mask.hpp>
+//#include <../include/compare_mask.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <iostream>
+#include <fstream>
 #include <thread>
 #include <vector>
 #include <chrono>
 
 static const uint64_t MAX_THREADS = 16;
 // static const uint64_t MAX_MASK_LENGTH = 100;
-static char mask[MAX_MASK_LENGTH];
+//static char mask[MAX_MASK_LENGTH];
+static uint8_t wildcard[MAX_MASK_LENGTH] = { 0 };
+static uint8_t masktext[MAX_MASK_LENGTH] = { 0 };
 static uint64_t mlen;
+static uint64_t masklen;
+
+std::ifstream::pos_type filesize(const char* filename)
+{
+    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+    return in.tellg();
+}
 
 namespace mtfind {
+    void print_it(uint64_t l) {
+        for (int i = 0; i < CHARS_IN_X64; ++i) {
+            int shift = 8 * i;
+            int num = (l >> shift) & 255;
+            if (num >= 32 && num <= 127) {
+                std::cout << (char)num << "";
+            }
+            else {
+                std::cout << num << "";
+            }
+        }
+        std::cout << std::endl;
+    }
+
     void process_block(Block & block) {
         std::vector <Result> results;
         uint64_t line = 0;
@@ -24,36 +48,44 @@ namespace mtfind {
             if (*c != '\n' && c != block.end) {
                 continue;
             }
-            for (j = i; j <= c - mlen + 1; ++j) {
-                std::string str(j, mlen);
-                std::string msk(mask, mlen);
-                //if (compare_mask::compare_strings(str, msk)) {
-                if (compare_mask::compare_mask(j, mask, mlen)) {
+
+            for (j = i; j <= c - 8 * masklen + 1; ++j) {
+                uint64_t* lin = (uint64_t*)j;
+                uint64_t* wld = (uint64_t*)wildcard;
+                uint64_t* msk = (uint64_t*)masktext;
+                uint64_t mu = 0;
+                for (mu = 0; mu < masklen; ++mu) {
+                    if ((*lin++ & *wld++) != *msk++) break;
+                }
+                if (mu == masklen) {
                     std::string found(j, mlen);
                     Result current(line, j - i + 1, found);
                     results.push_back(current);
-                    //std::cout << line << " ";
-                    //std::cout << j - i + 1 << " ";
-                    //std::cout << found << std::endl;
-                    j += mlen;
+                    j += mlen - 1;
                 }
             }
-/*
-            for (j = i; j <= c - mlen + 1; ++j) {
-                mc = *mask;
-                for (jc = *j; j <= c - mlen + 1 && mc != '?' && mc != jc; jc = *j++) {}
-                jc = *j;
-                for (k = 0;
-                    k < mlen && jc != '\n' && mc != '\0' && (mc == '?' || mc == jc);
-                    ++k, mc = *(mask + k), jc = *(j + k)) {}
-                if (k == mlen && jc != '\n') {
+
+            for (uint64_t nu = 0; j && j <= c - mlen + 1; ++j) {
+                char* ll = j;
+                char* ww = (char*)wildcard;
+                char* mm = (char*)masktext;
+                while (ll && (*ll & *ww) != *mm && ll <= c - mlen + 1) {
+                    ++ll;
+                }
+                j = ll;
+                for (nu = 0; nu < mlen; ++nu) {
+                    if (mm != 0 && (*ll & *ww) != *mm) break;
+                    ++ll;
+                    ++ww;
+                    ++mm;
+                }
+                if (nu == mlen) {
                     std::string found(j, mlen);
                     Result current(line, j - i + 1, found);
                     results.push_back(current);
-                    j += mlen;
+                    j += mlen - 1;
                 }
             }
-*/
             ++line;
             i = c + 1;
             if (!i || i > block.end) {
@@ -119,16 +151,42 @@ namespace mtfind {
     }
 
     int process_data(std::string file_name, std::string search_mask) {
+        // get file size
+        // uint64_t file_size = filesize(file_name.c_str());
+        // std::cout << file_size << std::endl;
+        // return 0;
         auto now1 = std::chrono::system_clock::now();
         auto time1 = std::chrono::system_clock::to_time_t(now1);
         //std::cout << ctime(&time1) << std::endl;
         mlen = search_mask.length();
-        strcpy_s(mask, mlen + 1, search_mask.c_str());
+        for (int i = 0; i < mlen; ++i) {
+            if (search_mask[i] == '?') {
+                wildcard[i] = 0;
+                masktext[i] = 0;
+            }
+            else {
+                wildcard[i] = 255;
+                masktext[i] = search_mask[i];
+            }
+        }
+        masklen = mlen / 8;
+        if (mlen % 8 != 0) {
+            ++masklen;
+        }
+
+        //strcpy_s(mask, mlen + 1, search_mask.c_str());
+        boost::iostreams::mapped_file_params params;
+        params.path = file_name;
+        params.flags = boost::iostreams::mapped_file::mapmode::readwrite;
+        //params.length = file_size;
         boost::iostreams::mapped_file file;
-        file.open(file_name, boost::iostreams::mapped_file::mapmode::readwrite);
+        file.open(params);
         if (file.is_open()) {
             std::vector<Block> blocks;
-            split_to_blocks((char*)file.const_data(), file.size(), blocks);
+            //char* data = (char*);
+            //std::cout << "(" << file.end()-file.begin() << ")" << std::endl;
+            //std::cout << "<" << data[file_size-1] << ">" << std::endl;
+            split_to_blocks(file.data(), file.size(), blocks);
             std::vector <std::thread> threads;
             std::vector <Result> results;
             for (auto& block : blocks) {
@@ -153,8 +211,8 @@ namespace mtfind {
 }
 
 int main(int argc, char* argv[]) {
-    std::string file_name = "./resources/Ulysses.txt";
-    std::string search_mask = "n?t?i?g";
+    std::string file_name = "./resources/hugetext.bin";
+    std::string search_mask = "n?gger";
     if (argc >= 3) {
         file_name = argv[1];
         search_mask = argv[2];
