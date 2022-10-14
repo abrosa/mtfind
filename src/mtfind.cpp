@@ -1,6 +1,7 @@
 ﻿/* Copyright [2022] <Alexander Abrosov> (aabrosov@gmail.com) */
 
 #include <../include/mtfind.hpp>
+#include <../include/compare_mask.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <iostream>
 #include <thread>
@@ -8,7 +9,7 @@
 #include <chrono>
 
 static const uint64_t MAX_THREADS = 16;
-static const uint64_t MAX_MASK_LENGTH = 100;
+// static const uint64_t MAX_MASK_LENGTH = 100;
 static char mask[MAX_MASK_LENGTH];
 static uint64_t mlen;
 
@@ -19,12 +20,25 @@ namespace mtfind {
         char* i = block.begin;
         char* j;
         uint64_t k = 0;
-        char mc;
-        char jc;
         for (char* c = block.begin; c && c <= block.end; ++c) {
             if (*c != '\n' && c != block.end) {
                 continue;
             }
+            for (j = i; j <= c - mlen + 1; ++j) {
+                std::string str(j, mlen);
+                std::string msk(mask, mlen);
+                //if (compare_mask::compare_strings(str, msk)) {
+                if (compare_mask::compare_mask(j, mask, mlen)) {
+                    std::string found(j, mlen);
+                    Result current(line, j - i + 1, found);
+                    results.push_back(current);
+                    //std::cout << line << " ";
+                    //std::cout << j - i + 1 << " ";
+                    //std::cout << found << std::endl;
+                    j += mlen;
+                }
+            }
+/*
             for (j = i; j <= c - mlen + 1; ++j) {
                 mc = *mask;
                 for (jc = *j; j <= c - mlen + 1 && mc != '?' && mc != jc; jc = *j++) {}
@@ -39,6 +53,7 @@ namespace mtfind {
                     j += mlen;
                 }
             }
+*/
             ++line;
             i = c + 1;
             if (!i || i > block.end) {
@@ -79,24 +94,27 @@ namespace mtfind {
         char* block_begin = file_begin;
         uint64_t block_size = avg_block_size;
         char* block_end = block_begin + block_size - 1;
+        uint64_t leftover = file_size - avg_block_size;
 
         while (true) {
-            while (block_end < file_end && *block_end != '\n') {
+            while (block_end < file_end && *block_end != '\n' && leftover != 0) {
                 ++block_size;
                 ++block_end;
+                --leftover;
             }
 
             Result empty(0, 0, "");
             Block new_block(block_begin, block_end, {empty});
             blocks.push_back(new_block);
 
-            if (block_end == file_end) {
+            if (leftover == 0) {
                 break;
             }
 
             block_begin = block_end + 1;
-            block_size = avg_block_size;
+            block_size = std::min(avg_block_size, leftover);
             block_end = block_begin + block_size - 1;
+            leftover -= block_size;
         }
     }
 
@@ -135,8 +153,8 @@ namespace mtfind {
 }
 
 int main(int argc, char* argv[]) {
-    std::string file_name = "./resources/test.bin";
-    std::string search_mask = "??fuck??";
+    std::string file_name = "./resources/Ulysses.txt";
+    std::string search_mask = "n?t?i?g";
     if (argc >= 3) {
         file_name = argv[1];
         search_mask = argv[2];

@@ -164,9 +164,11 @@
     <Text Include="src\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\compare_mask.cpp" />
     <ClCompile Include="src\mtfind.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\compare_mask.hpp" />
     <ClInclude Include="include\mtfind.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
