@@ -1,7 +1,6 @@
 ﻿/* Copyright [2022] <Alexander Abrosov> (aabrosov@gmail.com) */
 
 #include <../include/mtfind.hpp>
-//#include <../include/compare_mask.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <iostream>
 #include <fstream>
@@ -9,54 +8,31 @@
 #include <vector>
 #include <chrono>
 
-static const uint64_t MAX_THREADS = 16;
-// static const uint64_t MAX_MASK_LENGTH = 100;
-//static char mask[MAX_MASK_LENGTH];
-static uint8_t wildcard[MAX_MASK_LENGTH] = { 0 };
-static uint8_t masktext[MAX_MASK_LENGTH] = { 0 };
-static uint64_t mlen;
-static uint64_t masklen;
-
-std::ifstream::pos_type filesize(const char* filename)
-{
-    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
-    return in.tellg();
-}
+static const uint64_t CHARS_IN_UINT64 = 8;
 
 namespace mtfind {
-    void print_it(uint64_t l) {
-        for (int i = 0; i < CHARS_IN_X64; ++i) {
-            int shift = 8 * i;
-            int num = (l >> shift) & 255;
-            if (num >= 32 && num <= 127) {
-                std::cout << (char)num << "";
-            }
-            else {
-                std::cout << num << "";
-            }
-        }
-        std::cout << std::endl;
-    }
-
     void process_block(Block & block) {
         std::vector <Result> results;
         uint64_t line = 0;
+        uint64_t mu;
         char* i = block.begin;
+        char* k = block.end;
+        uint64_t* lin;
+        uint64_t* wld;
+        uint64_t* msk;
         char* j;
-        uint64_t k = 0;
-        for (char* c = block.begin; c && c <= block.end; ++c) {
-            if (*c != '\n' && c != block.end) {
+        char* ww;
+        char* mm;
+
+        for (char* c = i; c && c <= k; c++) {
+            if (*c != '\n' && c != k) {
                 continue;
             }
-
-            for (j = i; j <= c - 8 * masklen + 1; ++j) {
-                uint64_t* lin = (uint64_t*)j;
-                uint64_t* wld = (uint64_t*)wildcard;
-                uint64_t* msk = (uint64_t*)masktext;
-                uint64_t mu = 0;
-                for (mu = 0; mu < masklen; ++mu) {
-                    if ((*lin++ & *wld++) != *msk++) break;
-                }
+            for (j = i; j <= c - CHARS_IN_UINT64 * masklen + 1; j++) {
+                lin = (uint64_t*)j;
+                wld = (uint64_t*)wildcard;
+                msk = (uint64_t*)masktext;
+                for (mu = 0; mu < masklen && (*lin++ & *wld++) == *msk++; mu++) {}
                 if (mu == masklen) {
                     std::string found(j, mlen);
                     Result current(line, j - i + 1, found);
@@ -64,31 +40,21 @@ namespace mtfind {
                     j += mlen - 1;
                 }
             }
-
-            for (uint64_t nu = 0; j && j <= c - mlen + 1; ++j) {
-                char* ll = j;
-                char* ww = (char*)wildcard;
-                char* mm = (char*)masktext;
-                while (ll && (*ll & *ww) != *mm && ll <= c - mlen + 1) {
-                    ++ll;
-                }
-                j = ll;
-                for (nu = 0; nu < mlen; ++nu) {
-                    if (mm != 0 && (*ll & *ww) != *mm) break;
-                    ++ll;
-                    ++ww;
-                    ++mm;
-                }
-                if (nu == mlen) {
-                    std::string found(j, mlen);
-                    Result current(line, j - i + 1, found);
+            for (; j && j <= c - mlen + 1; ++j) {
+                ww = (char*)wildcard;
+                mm = (char*)masktext;
+                for (; j && (*j & *ww) != *mm && j <= c - mlen + 1; j++) {}
+                for (mu = 0; mu < mlen && (*j++ & *ww++) == *mm++; mu++) {}
+                if (mu == mlen) {
+                    std::string found(j - mlen, mlen);
+                    Result current(line, j - i + 1 - mlen, found);
                     results.push_back(current);
-                    j += mlen - 1;
+                    --j;
                 }
             }
             ++line;
             i = c + 1;
-            if (!i || i > block.end) {
+            if (!i) {
                 break;
             }
         }
@@ -122,27 +88,22 @@ namespace mtfind {
     void split_to_blocks(char* file_begin, uint64_t file_size, std::vector<Block>& blocks) {
         uint64_t avg_block_size = file_size / MAX_THREADS;
         char* file_end = file_begin + file_size - 1;
-
         char* block_begin = file_begin;
         uint64_t block_size = avg_block_size;
         char* block_end = block_begin + block_size - 1;
         uint64_t leftover = file_size - avg_block_size;
-
         while (true) {
             while (block_end < file_end && *block_end != '\n' && leftover != 0) {
                 ++block_size;
                 ++block_end;
                 --leftover;
             }
-
             Result empty(0, 0, "");
             Block new_block(block_begin, block_end, {empty});
             blocks.push_back(new_block);
-
             if (leftover == 0) {
                 break;
             }
-
             block_begin = block_end + 1;
             block_size = std::min(avg_block_size, leftover);
             block_end = block_begin + block_size - 1;
@@ -151,10 +112,6 @@ namespace mtfind {
     }
 
     int process_data(std::string file_name, std::string search_mask) {
-        // get file size
-        // uint64_t file_size = filesize(file_name.c_str());
-        // std::cout << file_size << std::endl;
-        // return 0;
         auto now1 = std::chrono::system_clock::now();
         auto time1 = std::chrono::system_clock::to_time_t(now1);
         //std::cout << ctime(&time1) << std::endl;
@@ -165,7 +122,7 @@ namespace mtfind {
                 masktext[i] = 0;
             }
             else {
-                wildcard[i] = 255;
+                wildcard[i] = 0xFF;
                 masktext[i] = search_mask[i];
             }
         }
@@ -173,19 +130,13 @@ namespace mtfind {
         if (mlen % 8 != 0) {
             ++masklen;
         }
-
-        //strcpy_s(mask, mlen + 1, search_mask.c_str());
         boost::iostreams::mapped_file_params params;
         params.path = file_name;
         params.flags = boost::iostreams::mapped_file::mapmode::readwrite;
-        //params.length = file_size;
         boost::iostreams::mapped_file file;
         file.open(params);
         if (file.is_open()) {
             std::vector<Block> blocks;
-            //char* data = (char*);
-            //std::cout << "(" << file.end()-file.begin() << ")" << std::endl;
-            //std::cout << "<" << data[file_size-1] << ">" << std::endl;
             split_to_blocks(file.data(), file.size(), blocks);
             std::vector <std::thread> threads;
             std::vector <Result> results;
