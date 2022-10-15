@@ -1,14 +1,12 @@
 ﻿/* Copyright [2022] <Alexander Abrosov> (aabrosov@gmail.com) */
 
-#include <../include/mtfind.hpp>
+#include "../include/mtfind.hpp"
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <iostream>
 #include <fstream>
 #include <thread>
 #include <vector>
 #include <chrono>
-
-static const uint64_t CHARS_IN_UINT64 = 8;
 
 namespace mtfind {
     void process_block(Block & block) {
@@ -23,40 +21,39 @@ namespace mtfind {
         char* j;
         char* ww;
         char* mm;
-
-        for (char* c = i; c && c <= k; c++) {
-            if (*c != '\n' && c != k) {
-                continue;
-            }
-            for (j = i; j <= c - CHARS_IN_UINT64 * masklen + 1; j++) {
+        char* c = i;
+        while (c && c <= k) {
+            if (*c != '\n' && c != k) {++c; continue;}
+            j = i;
+            while (j <= c - C_IN_U64 * masklen + 1) {
+                ww = (char*)wildcard;
+                mm = (char*)masktext;
+                if (j <= c - C_IN_U64 * masklen + 1 && (*j & *ww) != *mm) {++j; continue;}
                 lin = (uint64_t*)j;
                 wld = (uint64_t*)wildcard;
                 msk = (uint64_t*)masktext;
-                for (mu = 0; mu < masklen && (*lin++ & *wld++) == *msk++; mu++) {}
-                if (mu == masklen) {
-                    std::string found(j, mlen);
-                    Result current(line, j - i + 1, found);
-                    results.push_back(current);
-                    j += mlen - 1;
-                }
+                mu = 0;
+                while (mu < masklen && (*lin++ & *wld++) == *msk++) {++mu;}
+                if (mu != masklen) {++j; continue;}
+                std::string found(j, mlen);
+                Result current(line, j - i + 1, found);
+                results.push_back(current);
+                j += mlen;
             }
-            for (; j && j <= c - mlen + 1; ++j) {
+            while (j <= c - mlen + 1) {
                 ww = (char*)wildcard;
                 mm = (char*)masktext;
-                for (; j && (*j & *ww) != *mm && j <= c - mlen + 1; j++) {}
-                for (mu = 0; mu < mlen && (*j++ & *ww++) == *mm++; mu++) {}
-                if (mu == mlen) {
-                    std::string found(j - mlen, mlen);
-                    Result current(line, j - i + 1 - mlen, found);
-                    results.push_back(current);
-                    --j;
-                }
+                while (j <= c - mlen + 1 && (*j & *ww) != *mm) {++j;}
+                mu = 0;
+                while (mu < mlen && (*j++ & *ww++) == *mm++) {++mu;}
+                if (mu != mlen) {++j; continue;}
+                std::string found(j - mlen, mlen);
+                Result current(line, j - i + 1 - mlen, found);
+                results.push_back(current);
             }
             ++line;
-            i = c + 1;
-            if (!i) {
-                break;
-            }
+            ++c;
+            i = c;
         }
         Result empty(line, 0, "");
         results.push_back(empty);
@@ -72,8 +69,8 @@ namespace mtfind {
                 if (result.pos != 0) {
                     result.line += total_lines;
                     ++total_found;
-                    ss << result.line << " ";
-                    ss << result.pos << " ";
+                    ss << (int)result.line << " ";
+                    ss << (int)result.pos << " ";
                     ss << result.found << std::endl;
                 }
                 else {
@@ -81,7 +78,7 @@ namespace mtfind {
                 }
             }
         }
-        std::cout << total_found << std::endl;
+        std::cout << (int)total_found << std::endl;
         std::cout << ss.str();
     }
 
@@ -117,11 +114,7 @@ namespace mtfind {
         //std::cout << ctime(&time1) << std::endl;
         mlen = search_mask.length();
         for (int i = 0; i < mlen; ++i) {
-            if (search_mask[i] == '?') {
-                wildcard[i] = 0;
-                masktext[i] = 0;
-            }
-            else {
+            if (search_mask[i] != '?') {
                 wildcard[i] = 0xFF;
                 masktext[i] = search_mask[i];
             }
@@ -162,7 +155,8 @@ namespace mtfind {
 }
 
 int main(int argc, char* argv[]) {
-    std::string file_name = "./resources/hugetext.bin";
+    std::string file_name = "C:\\Users\\abrosa\\source\\repos\\mtfind\\resources\\test.bin";
+    // std::string search_mask = "hjxxp??ykph??ra?u?zak??zbhx?s?tm?ixbmsazsasvp????????yphuv???en?ohodop??fnkjuplzh?z?w?erl??wpc?py???";
     std::string search_mask = "n?gger";
     if (argc >= 3) {
         file_name = argv[1];

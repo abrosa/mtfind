@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 
+static const uint64_t C_IN_U64 = 8;
+
 static const uint64_t MAX_THREADS = 16;
 
 static const int MAX_MASK_LENGTH = 104;
@@ -26,9 +28,6 @@ namespace mtfind {
         uint64_t line;
         uint64_t pos;
         std::string found;
-        bool operator > (const Result& res) const {
-            return (line > res.line);
-        }
     };
 
     class Block {
