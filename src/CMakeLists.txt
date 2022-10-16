@@ -1,3 +1,14 @@
-# Add executable called "mtfind.exe" that is built from the source file
-# "mtfind.cpp". The extensions are automatically found.
-add_executable (mtfind.exe mtfind.cpp)
+cmake_minimum_required(VERSION 3.24)
+project(mtfind VERSION 1.0)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_REQUIRED_STANDARD True)
+add_executable(mtfind mtfind.cpp)
+target_include_directories(mtfind PUBLIC ${PROJECT_BINARY_DIR})
+#set(Boost_INCLUDE_DIR C:/local/boost_1_80_0)
+#set(Boost_LIBRARY_DIR C:/local/boost_1_80_0/stage/lib)
+set(Boost_INCLUDE_DIR C:/msys64/mingw64/include)
+set(Boost_LIBRARY_DIR C:/msys64/mingw64/lib)
+find_package(Boost 1.80 COMPONENTS iostreams REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+link_directories(${Boost_LIBRARY_DIR})
+target_link_libraries(mtfind ${Boost_IOSTREAMS_LIBRARY})
