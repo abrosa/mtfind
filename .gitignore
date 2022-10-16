@@ -38,8 +38,7 @@
 *.vsidx
 .vs/
 x64/
-Debug/
-Release/
+Win32/
 
 ## CMake files
 CMakeFiles

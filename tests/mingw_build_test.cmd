@@ -6,8 +6,8 @@ rem set exe_name="../cmake_build/mtfind.exe"
 rem set exe_name="../make_build/mtfind.exe"
 set exe_name="../x64/Debug/mtfind.exe"
 rem set exe_name="../x64/Release/mtfind.exe"
-rem set exe_name="../Debug/mtfind.exe"
-rem set exe_name="../Release/mtfind.exe"
+rem set exe_name="../Win32/Debug/mtfind.exe"
+rem set exe_name="../Win32/Release/mtfind.exe"
 set txt_folder=../resources
 
 %exe_name%
