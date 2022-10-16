@@ -34,10 +34,10 @@ namespace mtfind {
         while (c && c <= k) {
             if (*c != '\n' && c != k) {++c; continue;}
             j = i;
+            ww = (char*)wildcard;
+            mm = (char*)masktext;
+            while (j <= c - C_IN_U64 * masklen + 1 && (*j & *ww) != *mm) {++j;}
             while (j <= c - C_IN_U64 * masklen + 1) {
-                ww = (char*)wildcard;
-                mm = (char*)masktext;
-                if (j <= c - C_IN_U64 * masklen + 1 && (*j & *ww) != *mm) {++j; continue;}
                 lin = (uint64_t*)j;
                 wld = (uint64_t*)wildcard;
                 msk = (uint64_t*)masktext;
