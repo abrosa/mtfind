@@ -4,9 +4,18 @@
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <thread>
 #include <vector>
 #include <chrono>
+
+void print_usage_info() {
+    std::cerr << "Usage: mtfind.exe file_to_search.txt \"search_mask\"" << std::endl
+        << "file_to_search.txt size is up to 1GB" << std::endl
+        << "search_mask is up to 100 characters" << std::endl
+        << "'?' in mask for any printable character" << std::endl
+        << std::endl;
+}
 
 namespace mtfind {
     void process_block(Block & block) {
@@ -113,6 +122,10 @@ namespace mtfind {
         auto time1 = std::chrono::system_clock::to_time_t(now1);
         //std::cout << ctime(&time1) << std::endl;
         mlen = search_mask.length();
+        if (mlen > 100) {
+            print_usage_info();
+            return -1;
+        }
         for (int i = 0; i < mlen; ++i) {
             if (search_mask[i] != '?') {
                 wildcard[i] = 0xFF;
@@ -129,6 +142,10 @@ namespace mtfind {
         boost::iostreams::mapped_file file;
         file.open(params);
         if (file.is_open()) {
+            if (file.size() == 0 || file.size() > 1ull*1024*1024*1024) {
+                print_usage_info();
+                return -1;
+            }
             std::vector<Block> blocks;
             split_to_blocks(file.data(), file.size(), blocks);
             std::vector <std::thread> threads;
@@ -149,18 +166,18 @@ namespace mtfind {
         auto time2 = std::chrono::system_clock::to_time_t(now2);
         //std::cout << ctime(&time2) << std::endl;
         std::chrono::duration<double> elapsed_seconds = now2 - now1;
-        std::cout << "multi-threads: " << elapsed_seconds.count() << "s" << std::endl;
+        std::cout << "elapsed time: " << elapsed_seconds.count() << "s" << std::endl;
         return 0;
     }
 }
 
 int main(int argc, char* argv[]) {
-    std::string file_name = "C:\\Users\\abrosa\\source\\repos\\mtfind\\resources\\test.bin";
-    // std::string search_mask = "hjxxp??ykph??ra?u?zak??zbhx?s?tm?ixbmsazsasvp????????yphuv???en?ohodop??fnkjuplzh?z?w?erl??wpc?py???";
-    std::string search_mask = "n?gger";
-    if (argc >= 3) {
-        file_name = argv[1];
-        search_mask = argv[2];
+    if (argc < 3) {
+        print_usage_info();
+        return -1;
     }
-    mtfind::process_data(file_name, search_mask);
+    std::string file_name = argv[1];
+    std::string search_mask = argv[2];
+    int rc = mtfind::process_data(file_name, search_mask);
+    return rc;
 }

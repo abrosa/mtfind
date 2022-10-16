@@ -1,0 +1,29 @@
+@echo off
+setlocal enableextensions
+setlocal enabledelayedexpansion
+
+set exe_name="./release/mtfind.exe"
+rem set exe_name="./x64/Debug/mtfind.exe"
+set txt_folder=./resources
+
+%exe_name%
+echo errorlevel=%errorlevel%
+echo.
+
+%exe_name% %txt_folder%/test.bin "n?gger"
+echo errorlevel=%errorlevel%
+echo.
+
+%exe_name% %txt_folder%/task.txt "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890+"
+echo errorlevel=%errorlevel%
+echo.
+
+%exe_name% %txt_folder%/task.txt "?ad"
+echo errorlevel=%errorlevel%
+echo.
+
+%exe_name% %txt_folder%/hugetext.bin "n?gger"
+echo errorlevel=%errorlevel%
+echo.
+
+exit 0
