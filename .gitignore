@@ -38,19 +38,20 @@
 *.vsidx
 .vs/
 x64/
-#Debug/
-#Release/
 resources/test.txt
 
 ## CMake files
-CMakeLists.txt.user
-CMakeCache.txt
 CMakeFiles
-CMakeScripts
-Testing
-# Makefile
+.ninja_deps
+.ninja_log
+build.ninja
 cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps
+CMakeCache.txt
+#CMakeLists.txt.user
+#CMakeScripts
+#Testing
+#Makefile
+#install_manifest.txt
+#compile_commands.json
+#CTestTestfile.cmake
+#_deps
