@@ -76,16 +76,16 @@
     <SourcePath>src;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\msys64\boost_1_80_0;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\msys64\boost_1_80_0\stage\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\local\boost_1_80_0;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\local\boost_1_80_0\stage\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>C:\msys64\boost_1_80_0;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\msys64\boost_1_80_0\stage\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\local\boost_1_80_0;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\local\boost_1_80_0\stage\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\msys64\boost_1_80_0;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\msys64\boost_1_80_0\stage\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\local\boost_1_80_0;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\local\boost_1_80_0\stage\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

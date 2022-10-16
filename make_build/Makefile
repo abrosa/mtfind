@@ -1,5 +1,5 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = ./src/*.cpp
+OBJS = ../src/*.cpp
 
 #CC specifies which compiler we're using
 CC = g++
@@ -21,7 +21,7 @@ COMPILER_FLAGS = -Werror -std=c++20
 LINKER_FLAGS = -lmingw32 -lboost_iostreams-mt
 
 #OBJ_NAME specifies the name of our exectuable
-OBJ_NAME = ./release/mtfind
+OBJ_NAME = ./mtfind
 
 #This is the target that compiles our executable
 all : $(OBJS)

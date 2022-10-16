@@ -13,7 +13,7 @@ static uint8_t wildcard[MAX_MASK_LENGTH] = { 0 };
 
 static uint8_t masktext[MAX_MASK_LENGTH] = { 0 };
 
-static uint64_t mlen;
+static size_t mlen;
 
 static uint64_t masklen;
 

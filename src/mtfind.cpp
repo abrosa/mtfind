@@ -126,7 +126,7 @@ namespace mtfind {
             print_usage_info();
             return -1;
         }
-        for (int i = 0; i < mlen; ++i) {
+        for (unsigned int i = 0; i < mlen; ++i) {
             if (search_mask[i] != '?') {
                 wildcard[i] = 0xFF;
                 masktext[i] = search_mask[i];
