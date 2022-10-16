@@ -38,8 +38,8 @@
 *.vsidx
 .vs/
 x64/
-Debug/
-Release/
+#Debug/
+#Release/
 resources/test.txt
 
 ## CMake files
