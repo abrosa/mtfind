@@ -9,15 +9,15 @@
 #include <vector>
 #include <chrono>
 
-void print_usage_info() {
-    std::cerr << "Usage: mtfind.exe file_to_search.txt \"search_mask\"" << std::endl
-        << "file_to_search.txt size is up to 1GB" << std::endl
-        << "search_mask is up to 100 characters" << std::endl
-        << "'?' in mask for any printable character" << std::endl
-        << std::endl;
-}
-
 namespace mtfind {
+    void print_usage_info() {
+        std::cerr << "Usage: mtfind.exe file_to_search.txt \"search_mask\"" << std::endl
+            << "file_to_search.txt size is up to 1GB" << std::endl
+            << "search_mask is up to 100 characters" << std::endl
+            << "'?' in mask for any printable character" << std::endl
+            << std::endl;
+    }
+
     void process_block(Block & block) {
         std::vector <Result> results;
         uint64_t line = 0;
@@ -173,7 +173,7 @@ namespace mtfind {
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        print_usage_info();
+        mtfind::print_usage_info();
         return -1;
     }
     std::string file_name = argv[1];
